@@ -1,0 +1,27 @@
+program: ppo.py
+method: random # random, bayes, grid
+metric:
+  name: charts/episodic_length
+  goal: minimize
+parameters:
+  learning_rate:
+    values: [2.5e-4, 1e-3, 3e-4]
+  num_steps:
+    values: [128, 256, 512]
+  gamma:
+    values: [0.95, 0.99, 0.999]
+  gae_lambda:
+    values: [0.9, 0.95, 1.0]
+  ent_coef:
+    values: [0.0, 0.01, 0.05]
+  clip_coef:
+    values: [0.1, 0.2, 0.3]
+  update_epochs:
+    values: [4, 8, 10]
+  num_minibatches:
+    values: [4, 8]
+  num_envs:
+    values: [8]
+early_termination:
+  type: hyperband
+  max_iter: 10

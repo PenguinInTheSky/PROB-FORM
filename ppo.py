@@ -133,6 +133,7 @@ if __name__ == "__main__":
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    
     if args.track:
         import wandb
 
@@ -145,6 +146,20 @@ if __name__ == "__main__":
             monitor_gym=True,
             save_code=True,
         )
+
+        # override args with sweep config
+        args.learning_rate = wandb.config.get("learning_rate", args.learning_rate)
+        args.num_steps = wandb.config.get("num_steps", args.num_steps)
+        args.gamma = wandb.config.get("gamma", args.gamma)
+        args.gae_lambda = wandb.config.get("gae_lambda", args.gae_lambda)
+        args.ent_coef = wandb.config.get("ent_coef", args.ent_coef)
+        args.clip_coef = wandb.config.get("clip_coef", args.clip_coef)
+        args.update_epochs = wandb.config.get("update_epochs", args.update_epochs)
+        args.num_minibatches = wandb.config.get("num_minibatches", args.num_minibatches)
+        
+        args.batch_size = int(args.num_envs * args.num_steps)
+        args.minibatch_size = int(args.batch_size // args.num_minibatches)
+        args.num_iterations = args.total_timesteps // args.batch_size
          
     writer = SummaryWriter(f"runs/{run_name}")
     writer.add_text(
@@ -213,7 +228,7 @@ if __name__ == "__main__":
             if "_episode" in infos:
                 for i, info in enumerate(infos["_episode"]):
                     if info:
-                        # print(f"global_step={global_step}, episodic_return={infos['episode']['r'][i]}")
+                        # print(f"global_step={global_step}, episodic_return={infos['episode']['r'][i]}, episodic_length={infos['episode']['l'][i]}")
                         writer.add_scalar("charts/episodic_return", infos["episode"]["r"][i], global_step)
                         writer.add_scalar("charts/episodic_length", infos["episode"]["l"][i], global_step)
 
