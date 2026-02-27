@@ -12,8 +12,9 @@ from minigrid.wrappers import FlatObsWrapper, FullyObsWrapper
 # TODO: fix the definition navigation
 
 class MyEnv(MiniGridEnv):
+  # Note: miminum size is 4 or else won't be able to reset the environment
 	def __init__(self,
-							size=2,
+							size=4,
 							agent_start_pos=(1,1),
 							agent_start_dir=0,
 							max_steps: int | None=None,

@@ -185,6 +185,7 @@ if __name__ == "__main__":
     next_done = torch.zeros(args.num_envs).to(device)
 
     for iteration in range(1, args.num_iterations + 1):
+        # print("Iteration:", iteration)
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
@@ -209,12 +210,12 @@ if __name__ == "__main__":
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
 
-            if "final_info" in infos:
-                for info in infos["final_info"]:
-                    if info and "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+            if "_episode" in infos:
+                for i, info in enumerate(infos["_episode"]):
+                    if info:
+                        # print(f"global_step={global_step}, episodic_return={infos['episode']['r'][i]}")
+                        writer.add_scalar("charts/episodic_return", infos["episode"]["r"][i], global_step)
+                        writer.add_scalar("charts/episodic_length", infos["episode"]["l"][i], global_step)
 
         # bootstrap value if not done
         with torch.no_grad():
