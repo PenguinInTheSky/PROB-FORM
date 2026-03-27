@@ -20,8 +20,8 @@ class RewardMachine():
     
     self.rewards = defaultdict(float)
     # TODO: reward shaping
-    self.rewards[('u0', 'u1')] = 0
-    self.rewards[('u1', 'uA')] = 1
+    self.rewards[('u0', 'u1')] = 0.6
+    self.rewards[('u1', 'uA')] = 0.2
     
     # TODO: buffer for transitions
     # renew the buffer every time we transition to a new state
@@ -44,17 +44,17 @@ class RewardMachine():
     # TODO: implement state transition based on current state and observation
     # what is the form of obs
     
-    print("Adding obs to buffer and checking for state transition...")
-    print("Current state is:", self.current_state)
+    # print("Adding obs to buffer and checking for state transition...")
+    # print("Current state is:", self.current_state)
     # 1. add obs to buffer
     if pos in self.hb['yellow']:
-      print("Adding yellow ball at position", pos, "to buffer")
+      # print("Adding yellow ball at position", pos, "to buffer")
       self.buffer.append(('yellow', pos))
     if pos in self.hb['blue']:
-      print("Adding blue ball at position", pos, "to buffer")
+      # print("Adding blue ball at position", pos, "to buffer")
       self.buffer.append(('blue', pos))
     if pos in self.hb['goal']:
-      print("Adding goal at position", pos, "to buffer")
+      # print("Adding goal at position", pos, "to buffer")
       self.buffer.append(('goal', pos))
       
     # 2. check if we can transition to a new state based on the buffer and the state transition rules
@@ -79,11 +79,11 @@ class RewardMachine():
     # if we cannot transition, do nothing
     
     # 4. return done, reward, info (perhaps)
-    print("And next state is:", self.current_state)
-    print("Reward is:", self.reward)
+    # print("And next state is:", self.current_state)
+    # print("Reward is:", self.reward)
     done = self.is_accepted()
-    if done:
-      print("Task completed!")
+    # if done:
+      # print("Task completed!")
     return done, self.reward, {}
 
 # for each step (env.step): call transition first, then get reward of RM

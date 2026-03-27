@@ -13,7 +13,7 @@ import tyro
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
-import grid
+import env
 
 @dataclass
 class Args:
