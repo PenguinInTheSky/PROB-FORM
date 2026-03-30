@@ -32,7 +32,7 @@ class MyEnv(MiniGridEnv):
 		super().__init__(
 			mission_space=mission_space,
 			grid_size=size,
-			max_steps=500,
+			max_steps=1000,
 			**kwargs,
 		)
 		
@@ -47,17 +47,19 @@ class MyEnv(MiniGridEnv):
 		self.grid.wall_rect(0, 0, width, height)
 		
 		# generate walls with a gap at (5, 5)
-		for i in range(1, height-1):
-			if i != 5:
-				self.grid.set(5, i, Wall())
+		# REMOVED: no wall
+		# for i in range(1, height-1):
+		# 	if i != 5:
+		# 		self.grid.set(5, i, Wall())
 				
+    # REMOVE: extra balls
 		# place objects
 		self.put_obj(Ball('yellow'), 3, 3)
-		self.put_obj(Ball('yellow'), 2, 6)
-		self.put_obj(Ball('yellow'), 4, 5)
-		self.put_obj(Ball('yellow'), 2, 7)
-		self.put_obj(Ball('blue'), 7, 7)
-		self.put_obj(Ball('blue'), 1, 3)
+		# self.put_obj(Ball('yellow'), 2, 6)
+		# self.put_obj(Ball('yellow'), 4, 5)
+		# self.put_obj(Ball('yellow'), 2, 7)
+		# self.put_obj(Ball('blue'), 7, 7)
+		# self.put_obj(Ball('blue'), 1, 3)
 		self.place_agent()
 		
 		# generate mission
@@ -111,11 +113,6 @@ class MyEnv(MiniGridEnv):
 						if fwd_cell and fwd_cell.can_pickup():
 							picked_up = tuple(fwd_pos)
 							self.grid.set(fwd_pos[0], fwd_pos[1], None)
-
-				# Done action (not used by default)
-				elif action == self.actions.done:
-						pass
-
 				else:
 						raise ValueError(f"Unknown action: {action}")
 
