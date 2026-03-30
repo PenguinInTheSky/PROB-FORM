@@ -11,16 +11,15 @@ class RewardMachine():
     
     # TODO: put these env specific coordinates in a constant file or something else to avoid magic number
     # TODO: use coordinates for now, might have to change in the future
-    self.hb['yellow'] = [(3, 3), (2, 6), (4, 5), (2, 7)]
-    self.hb['blue'] = [(7, 7), (1, 3)]
+    self.hb['goal'] = [(2, 2)]
     
     self.state_transitions = defaultdict(list)
-    self.state_transitions[('u0', 'uA')] = ('universal', 'yellow')
+    self.state_transitions[('u0', 'uA')] = ('universal', 'goal')
     # self.state_transitions[('u1', 'uA')] = ('existential', 'blue')
     
     self.rewards = defaultdict(float)
     # TODO: reward shaping
-    self.rewards[('u0', 'uA')] = 0.6
+    self.rewards[('u0', 'uA')] = 1
     # self.rewards[('u1', 'uA')] = 1
     
     # TODO: buffer for transitions
@@ -52,12 +51,6 @@ class RewardMachine():
     # print("Adding obs to buffer and checking for state transition...")
     # print("Current state is:", self.current_state)
     # 1. add obs to buffer
-    if pos in self.hb['yellow']:
-      # print("Adding yellow ball at position", pos, "to buffer")
-      self.buffer.append(('yellow', pos))
-    if pos in self.hb['blue']:
-      # print("Adding blue ball at position", pos, "to buffer")
-      self.buffer.append(('blue', pos))
     if pos in self.hb['goal']:
       # print("Adding goal at position", pos, "to buffer")
       self.buffer.append(('goal', pos))

@@ -22,12 +22,12 @@ class MyEnv(MiniGridEnv):
 		left = 0
 		right = 1
 		forward = 2
-		pickup = 3
+		# pickup = 3
 		# drop = 4
 		# toggle = 5
 		# done = 4 # 6
 	
-	def __init__(self, size=10, **kwargs):
+	def __init__(self, size=8, **kwargs):
 		mission_space = MissionSpace(mission_func=self._gen_mission)
 		super().__init__(
 			mission_space=mission_space,
@@ -42,22 +42,10 @@ class MyEnv(MiniGridEnv):
 		self.rm = RewardMachine(self)
 		
 	def _gen_grid(self, width, height):
-		# size 10 * 10, wall at column 5, gap at (5, 5), goal at (9, 9), agent at (1, 1), yellow balls at (3, 3), (2, 6), (4, 5), (2, 7), blue ball at (7, 7), (1, 3)
 		self.grid = Grid(width, height)
 		self.grid.wall_rect(0, 0, width, height)
-		
-		# generate walls with a gap at (5, 5)
-		for i in range(1, height-1):
-			if i != 5:
-				self.grid.set(5, i, Wall())
 				
 		# place objects
-		self.put_obj(Ball('yellow'), 3, 3)
-		self.put_obj(Ball('yellow'), 2, 6)
-		self.put_obj(Ball('yellow'), 4, 5)
-		self.put_obj(Ball('yellow'), 2, 7)
-		self.put_obj(Ball('blue'), 7, 7)
-		self.put_obj(Ball('blue'), 1, 3)
 		self.place_agent()
 		
 		# generate mission
@@ -105,17 +93,6 @@ class MyEnv(MiniGridEnv):
 				elif action == self.actions.forward:
 						if fwd_cell is None or fwd_cell.can_overlap():
 								self.agent_pos = tuple(fwd_pos)
-
-				# Pick up an object
-				elif action == self.actions.pickup:
-						if fwd_cell and fwd_cell.can_pickup():
-							picked_up = tuple(fwd_pos)
-							self.grid.set(fwd_pos[0], fwd_pos[1], None)
-
-				# Done action (not used by default)
-				elif action == self.actions.done:
-						pass
-
 				else:
 						raise ValueError(f"Unknown action: {action}")
 
@@ -126,7 +103,7 @@ class MyEnv(MiniGridEnv):
 				if self.render_mode == "human":
 						self.render()
 
-				terminated, reward, _ = self.rm.transition(picked_up)
+				terminated, reward, _ = self.rm.transition(self.agent_pos)
 				obs = self.gen_obs()
 		
 				# if terminated:
