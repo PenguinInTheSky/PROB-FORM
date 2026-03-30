@@ -15,23 +15,26 @@ class RewardMachine():
     self.hb['blue'] = [(7, 7), (1, 3)]
     
     self.state_transitions = defaultdict(list)
-    self.state_transitions[('u0', 'u1')] = ('universal', 'yellow')
-    self.state_transitions[('u1', 'uA')] = ('existential', 'blue')
+    self.state_transitions[('u0', 'uA')] = ('universal', 'yellow')
+    # self.state_transitions[('u1', 'uA')] = ('existential', 'blue')
     
     self.rewards = defaultdict(float)
     # TODO: reward shaping
-    self.rewards[('u0', 'u1')] = 0.6
-    self.rewards[('u1', 'uA')] = 0.2
+    self.rewards[('u0', 'uA')] = 0.6
+    # self.rewards[('u1', 'uA')] = 1
     
     # TODO: buffer for transitions
     # renew the buffer every time we transition to a new state
     self.buffer = []
 
     self.reward = 0
+    self.step_count = 0
     
   def reset(self):
     self.current_state = self.start_state
     self.buffer = []
+    self.step_count = 0
+    self.reward = 0
   
   def is_accepted(self):
     return self.current_state == self.accept_state
@@ -40,6 +43,8 @@ class RewardMachine():
     return self.reward
   
   def transition(self, pos):
+    reward = 0
+    self.step_count += 1
     # TODO: use pos for now, might have to change to obs in the future
     # TODO: implement state transition based on current state and observation
     # what is the form of obs
@@ -64,13 +69,13 @@ class RewardMachine():
         if transition_type == 'universal':
           if len(self.hb[required_obs]) == len([obs for obs in self.buffer if obs[0] == required_obs]):
             self.buffer = []
-            self.reward = self.rewards[(self.current_state, next_state)]
+            reward = self.rewards[(self.current_state, next_state)]
             self.current_state = next_state
             break
         elif transition_type == 'existential':
           if any(obs for obs in self.buffer if obs[0] == required_obs):
             self.buffer = []
-            self.reward = self.rewards[(self.current_state, next_state)]
+            reward = self.rewards[(self.current_state, next_state)]
             self.current_state = next_state
             break
       
@@ -84,7 +89,9 @@ class RewardMachine():
     done = self.is_accepted()
     # if done:
       # print("Task completed!")
-    return done, self.reward, {}
+    return done, reward, {}
 
 # for each step (env.step): call transition first, then get reward of RM
 # transition will set reward straight away
+
+# reward of reward machine is not cumulative

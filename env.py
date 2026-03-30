@@ -25,14 +25,14 @@ class MyEnv(MiniGridEnv):
 		pickup = 3
 		# drop = 4
 		# toggle = 5
-		done = 4 # 6
+		# done = 4 # 6
 	
 	def __init__(self, size=10, **kwargs):
 		mission_space = MissionSpace(mission_func=self._gen_mission)
 		super().__init__(
 			mission_space=mission_space,
 			grid_size=size,
-			max_steps=200,
+			max_steps=500,
 			**kwargs,
 		)
 		
@@ -128,9 +128,14 @@ class MyEnv(MiniGridEnv):
 
 				terminated, reward, _ = self.rm.transition(picked_up)
 				obs = self.gen_obs()
-    
-				reward += self.step_count * 0.001 # small step penalty to encourage shorter solutions
-
+		
+				# if terminated:
+				# 	print("terminated")
+				
+				if self.step_count >= self.max_steps:
+					truncated = True
+					# print("truncated")
+						
 				return obs, reward, terminated, truncated, {}
 		
 	@staticmethod
