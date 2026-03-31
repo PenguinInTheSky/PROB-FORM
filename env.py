@@ -27,7 +27,7 @@ class MyEnv(MiniGridEnv):
 		# toggle = 5
 		# done = 4 # 6
 	
-	def __init__(self, size=10, **kwargs):
+	def __init__(self, size=10, reward_machine=None, **kwargs):
 		mission_space = MissionSpace(mission_func=self._gen_mission)
 		super().__init__(
 			mission_space=mission_space,
@@ -39,7 +39,7 @@ class MyEnv(MiniGridEnv):
 		# redefine default action space
 		self.actions = MyEnv.Actions
 		self.action_space = gym.spaces.Discrete(len(self.actions))
-		self.rm = RewardMachine(self)
+		self.rm = reward_machine
 		
 	def _gen_grid(self, width, height):
 		# size 10 * 10, wall at column 5, gap at (5, 5), goal at (9, 9), agent at (1, 1), yellow balls at (3, 3), (2, 6), (4, 5), (2, 7), blue ball at (7, 7), (1, 3)

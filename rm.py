@@ -1,9 +1,8 @@
 from collections import defaultdict
 
 class RewardMachine():
-  def __init__(self, env):
-    self.env = env
-    self.states = ['u0', 'u1', 'u2', 'uA']
+  def __init__(self):
+    self.states = ['u0', 'u1', 'uA']
     self.start_state = 'u0'
     self.current_state = self.start_state
     self.accept_state = 'uA'
@@ -11,17 +10,17 @@ class RewardMachine():
     
     # TODO: put these env specific coordinates in a constant file or something else to avoid magic number
     # TODO: use coordinates for now, might have to change in the future
-    self.hb['yellow'] = [(3, 3)] #, (2, 6), (4, 5), (2, 7)]
+    self.hb['yellow'] = [(3, 3)]
     self.hb['blue'] = [(7, 7), (1, 3)]
     
     self.state_transitions = defaultdict(list)
-    self.state_transitions[('u0', 'u1')] = ('universal', 'yellow')
-    self.state_transitions[('u1', 'uA')] = ('existential', 'blue')
+    self.state_transitions[('u0', 'uA')] = ('universal', 'yellow')
+    # self.state_transitions[('u1', 'uA')] = ('existential', 'blue')
     
     self.rewards = defaultdict(float)
     # TODO: reward shaping
-    self.rewards[('u0', 'u1')] = 1
-    self.rewards[('u1', 'uA')] = 2
+    self.rewards[('u0', 'uA')] = 1
+    # self.rewards[('u1', 'uA')] = 2
     
     # TODO: buffer for transitions
     # renew the buffer every time we transition to a new state
@@ -41,6 +40,13 @@ class RewardMachine():
   
   def get_reward(self):
     return self.reward
+  
+  @staticmethod
+  def get_states():
+    return ['u0', 'u1', 'uA']
+
+  def get_current_state(self):
+    return self.current_state
   
   def transition(self, pos):
     reward = 0
