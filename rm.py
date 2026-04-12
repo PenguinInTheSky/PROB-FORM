@@ -3,25 +3,31 @@ from collections import defaultdict
 class RewardMachine():
   def __init__(self, env):
     self.env = env
-    self.states = ['u0', 'u1', 'u2', 'uA']
+    self.states = ['u0', 'u1', 'uA']
+    self.states = ['u0', 'u1', 'uA']
     self.start_state = 'u0'
+    self.state_to_int = {'u0': 0, 'u1': 1, 'uA': 2}
     self.current_state = self.start_state
     self.accept_state = 'uA'
     self.hb = defaultdict(list)
     
     # TODO: put these env specific coordinates in a constant file or something else to avoid magic number
     # TODO: use coordinates for now, might have to change in the future
-    self.hb['yellow'] = [(3, 3), (2, 6), (4, 5), (2, 7)]
-    self.hb['blue'] = [(7, 7), (1, 3)]
+    self.hb['yellow'] = [(3, 3)]#, (2, 6), (4, 5), (2, 7)]
+    self.hb['blue'] = [(1, 3)]
     
     self.state_transitions = defaultdict(list)
-    self.state_transitions[('u0', 'uA')] = ('universal', 'yellow')
-    # self.state_transitions[('u1', 'uA')] = ('existential', 'blue')
+    self.state_transitions[('u0', 'u1')] = ('universal', 'yellow')
+    self.state_transitions[('u1', 'uA')] = ('universal', 'blue')
+    self.state_transitions[('u0', 'u1')] = ('universal', 'yellow')
+    self.state_transitions[('u1', 'uA')] = ('universal', 'blue')
     
     self.rewards = defaultdict(float)
     # TODO: reward shaping
-    self.rewards[('u0', 'uA')] = 0.6
-    # self.rewards[('u1', 'uA')] = 1
+    self.rewards[('u0', 'u1')] = 0.6
+    self.rewards[('u1', 'uA')] = 1.0
+    self.rewards[('u0', 'u1')] = 0.6
+    self.rewards[('u1', 'uA')] = 1.0
     
     # TODO: buffer for transitions
     # renew the buffer every time we transition to a new state
@@ -29,6 +35,9 @@ class RewardMachine():
 
     self.reward = 0
     self.step_count = 0
+  
+  def get_current_int_state(self):
+    return self.state_to_int[self.current_state]
     
   def reset(self):
     self.current_state = self.start_state

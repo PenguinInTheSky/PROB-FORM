@@ -27,12 +27,12 @@ class MyEnv(MiniGridEnv):
 		# toggle = 5
 		# done = 4 # 6
 	
-	def __init__(self, size=10, **kwargs):
+	def __init__(self, size=5, **kwargs):
 		mission_space = MissionSpace(mission_func=self._gen_mission)
 		super().__init__(
 			mission_space=mission_space,
 			grid_size=size,
-			max_steps=500,
+			max_steps=200,
 			**kwargs,
 		)
 		
@@ -47,16 +47,16 @@ class MyEnv(MiniGridEnv):
 		self.grid.wall_rect(0, 0, width, height)
 		
 		# generate walls with a gap at (5, 5)
-		for i in range(1, height-1):
-			if i != 5:
-				self.grid.set(5, i, Wall())
+		# for i in range(1, height-1):
+		# 	if i != 5:
+		# 		self.grid.set(5, i, Wall())
 				
 		# place objects
 		self.put_obj(Ball('yellow'), 3, 3)
-		self.put_obj(Ball('yellow'), 2, 6)
-		self.put_obj(Ball('yellow'), 4, 5)
-		self.put_obj(Ball('yellow'), 2, 7)
-		self.put_obj(Ball('blue'), 7, 7)
+		# self.put_obj(Ball('yellow'), 2, 6)
+		# self.put_obj(Ball('yellow'), 4, 5)
+		# self.put_obj(Ball('yellow'), 2, 7)
+		# self.put_obj(Ball('blue'), 7, 7)
 		self.put_obj(Ball('blue'), 1, 3)
 		self.place_agent()
 		
@@ -69,8 +69,9 @@ class MyEnv(MiniGridEnv):
 		seed: int | None = None,
 		options: dict[str, Any] | None = None,
 	) -> tuple[ObsType, dict[str, Any]]:
-		obs, info = super().reset(seed=seed) 
+		obs, info = super().reset(seed=seed)
 		self.rm.reset()
+		info["rm_state"] = self.rm.get_current_int_state()
 		return obs, info
 	
 	def step(
@@ -126,17 +127,19 @@ class MyEnv(MiniGridEnv):
 				if self.render_mode == "human":
 						self.render()
 
-				terminated, reward, _ = self.rm.transition(picked_up)
 				obs = self.gen_obs()
 		
 				# if terminated:
 				# 	print("terminated")
-				
+				# obs["rm_state"] = self.rm.get_current_int_state()
+				rm_state = self.rm.get_current_int_state()
+				terminated, reward, _ = self.rm.transition(picked_up)
 				if self.step_count >= self.max_steps:
 					truncated = True
 					# print("truncated")
-						
-				return obs, reward, terminated, truncated, {}
+     
+
+				return obs, reward, terminated, truncated, {"rm_state": rm_state}
 		
 	@staticmethod
 	def _gen_mission():

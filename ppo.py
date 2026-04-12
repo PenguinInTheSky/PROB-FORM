@@ -101,15 +101,17 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
+        input_dim = np.array(envs.single_observation_space.shape).prod() + 1
+        print("Input dimension is", input_dim)
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
+            layer_init(nn.Linear(input_dim, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 1), std=1.0),
         )
         self.actor = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)),
+            layer_init(nn.Linear(input_dim, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64, 64)),
             nn.Tanh(),
@@ -180,7 +182,6 @@ if __name__ == "__main__":
         [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
-
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
@@ -189,6 +190,7 @@ if __name__ == "__main__":
     actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    rm_states = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
@@ -198,7 +200,8 @@ if __name__ == "__main__":
     next_obs, _ = envs.reset(seed=args.seed)
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
-
+    next_rm_state = torch.zeros(args.num_envs).to(device)
+    
     for iteration in range(1, args.num_iterations + 1):
         # print("Iteration:", iteration)
         # Annealing the rate if instructed to do so.
@@ -214,7 +217,9 @@ if __name__ == "__main__":
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs)
+                # concat next_obs and next_rm_states
+                input = torch.cat([next_obs, next_rm_state.unsqueeze(-1)], dim=-1)
+                action, logprob, _, value = agent.get_action_and_value(input)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -224,7 +229,10 @@ if __name__ == "__main__":
             next_done = np.logical_or(terminations, truncations)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
-
+            rm_states[step] = torch.tensor(infos["rm_state"]).to(device).view(-1)
+            next_rm_state = torch.tensor(infos["rm_state"]).to(device) 
+            # print(rm_states[step])
+            
             if "_episode" in infos:
                 for i, info in enumerate(infos["_episode"]):
                     if info:
@@ -234,7 +242,9 @@ if __name__ == "__main__":
 
         # bootstrap value if not done
         with torch.no_grad():
-            next_value = agent.get_value(next_obs).reshape(1, -1)
+            # combine next_obs and next_rm_state to get the value
+            input = torch.cat([next_obs, next_rm_state.unsqueeze(-1)], dim=-1)
+            next_value = agent.get_value(input).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
@@ -255,6 +265,7 @@ if __name__ == "__main__":
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
+        b_rm_states = rm_states.reshape(-1)
 
         # Optimizing the policy and value network
         b_inds = np.arange(args.batch_size)
@@ -264,8 +275,13 @@ if __name__ == "__main__":
             for start in range(0, args.batch_size, args.minibatch_size):
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
-
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions.long()[mb_inds])
+                
+                input = torch.concat([b_obs[mb_inds], b_rm_states[mb_inds].unsqueeze(-1)], dim=-1)
+                # print("Training Next obs shape is", b_obs[mb_inds].shape)
+                # print("RM state shape is", b_rm_states[mb_inds].unsqueeze(-1).shape)
+                # print("Training Input shape is", input.shape)
+                # print(b_rm_states[mb_inds])
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(input, b_actions.long()[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
