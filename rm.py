@@ -4,7 +4,6 @@ class RewardMachine():
   def __init__(self, env):
     self.env = env
     self.states = ['u0', 'u1', 'uA']
-    self.states = ['u0', 'u1', 'uA']
     self.start_state = 'u0'
     self.state_to_int = {'u0': 0, 'u1': 1, 'uA': 2}
     self.current_state = self.start_state
@@ -19,13 +18,9 @@ class RewardMachine():
     self.state_transitions = defaultdict(list)
     self.state_transitions[('u0', 'u1')] = ('universal', 'yellow')
     self.state_transitions[('u1', 'uA')] = ('universal', 'blue')
-    self.state_transitions[('u0', 'u1')] = ('universal', 'yellow')
-    self.state_transitions[('u1', 'uA')] = ('universal', 'blue')
     
     self.rewards = defaultdict(float)
     # TODO: reward shaping
-    self.rewards[('u0', 'u1')] = 0.6
-    self.rewards[('u1', 'uA')] = 1.0
     self.rewards[('u0', 'u1')] = 0.6
     self.rewards[('u1', 'uA')] = 1.0
     
@@ -35,6 +30,10 @@ class RewardMachine():
 
     self.reward = 0
     self.step_count = 0
+  
+  @staticmethod
+  def get_num_states():
+    return 3
   
   def get_current_int_state(self):
     return self.state_to_int[self.current_state]
