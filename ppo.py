@@ -229,7 +229,7 @@ if __name__ == "__main__":
             next_done = np.logical_or(terminations, truncations)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
-            rm_states[step] = torch.tensor(infos["rm_state"]).to(device).view(-1)
+            rm_states[step] = next_rm_state
             next_rm_state = torch.tensor(infos["rm_state"]).to(device) 
             # print(rm_states[step])
             
