@@ -17,6 +17,8 @@ from rm import RewardMachine
 
 from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX, STATE_TO_IDX
 
+from constants import OBS_NOISE, PICKED_UP_DETECTION_TRUE_PROB_MEAN, PICKED_UP_DETECTION_TRUE_PROB_STD, PICKED_UP_DETECTION_FALSE_PROB_MEAN, PICKED_UP_DETECTION_FALSE_PROB_STD
+
 class MyEnv(MiniGridEnv):
 	# define action space
 	class Actions(IntEnum):
@@ -71,6 +73,7 @@ class MyEnv(MiniGridEnv):
 		# self.put_obj(ball4, 2, 7)
 		# self.put_obj(ball5, 7, 7)
 		self.put_obj(ball6, 1, 3)
+		self.picked_up_objects = [ball1, ball6, None]
 		self.place_agent()
 		
 		# generate mission
@@ -102,6 +105,18 @@ class MyEnv(MiniGridEnv):
 
 		noisy_obs["image"] = image
 		return noisy_obs
+
+	def add_picked_up_detection_noise(self, pick_up_object_id: str):
+		# get gaussian probability of true detection, including None
+		true_prob = np.random.normal(PICKED_UP_DETECTION_TRUE_PROB_MEAN, PICKED_UP_DETECTION_TRUE_PROB_STD)
+		# get gaussian probability of false detection
+		false_probs = np.random.normal(PICKED_UP_DETECTION_FALSE_PROB_MEAN, PICKED_UP_DETECTION_FALSE_PROB_STD, size=len(self.picked_up_objects) - 1)
+		sum_probs = true_prob + false_probs.sum()
+		true_prob /= sum_probs
+		false_probs /= sum_probs
+		true_label = [(pick_up_object_id, true_prob)]
+		false_labels = [(obj, prob) for obj, prob in zip(self.picked_up_objects, false_probs) if obj.id != pick_up_object_id]
+		return true_label + false_labels
 
 	def step(
 				self, action: ActType
@@ -161,13 +176,15 @@ class MyEnv(MiniGridEnv):
 				rm_state = self.rm.get_current_int_state()
 		
 				# TODO: return noisy obs, have the RM transition taking in the noisy picked-up observation
-				noisy_obs = self.add_obs_noise(obs, noise_prob=0.1, corrupt_agent_cell=False)
+				noisy_obs = self.add_obs_noise(obs, noise_prob=OBS_NOISE, corrupt_agent_cell=False)
 
-				terminated, reward, _ = self.rm.transition(picked_up)
-    
+				noisy_picked_up_detection = self.add_picked_up_detection_noise(picked_up)
+				terminated, reward, _ = self.rm.transition(noisy_picked_up_detection)
+				# print(f"Picked up: {picked_up}, Noisy picked up detection: {noisy_picked_up_detection}, RM state: {rm_state}, Reward: {reward}, Terminated: {terminated}")
 				if self.step_count >= self.max_steps:
 					truncated = True
-     
+
+
 				return noisy_obs, reward, terminated, truncated, {"rm_state": rm_state}
 		
 	@staticmethod
@@ -191,6 +208,7 @@ gym.register(
 	id="MyEnv-v1",
 	entry_point=make_myenv,
 )
+
 
 # TODO: reward shaping for first-order RM
 # assumption: noisy observation and noisy picked-up detection, and these two are independent of each other, and the noise is symmetric (false positive and false negative have the same probability)
