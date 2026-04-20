@@ -6,7 +6,6 @@ from minigrid.core.mission import MissionSpace
 from minigrid.core.world_object import Door, Goal, Key, Wall, Ball
 from minigrid.manual_control import ManualControl
 from minigrid.minigrid_env import MiniGridEnv
-from minigrid.core.constants import COLOR_NAMES
 import gymnasium as gym
 
 from gymnasium.core import ActType, ObsType
@@ -15,6 +14,8 @@ from minigrid.wrappers import FlatObsWrapper, FullyObsWrapper
 import numpy as np
 
 from rm import RewardMachine
+
+from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX, STATE_TO_IDX
 
 class MyEnv(MiniGridEnv):
 	# define action space
@@ -52,12 +53,24 @@ class MyEnv(MiniGridEnv):
 		# 		self.grid.set(5, i, Wall())
 				
 		# place objects
-		self.put_obj(Ball('yellow'), 3, 3)
-		# self.put_obj(Ball('yellow'), 2, 6)
-		# self.put_obj(Ball('yellow'), 4, 5)
-		# self.put_obj(Ball('yellow'), 2, 7)
-		# self.put_obj(Ball('blue'), 7, 7)
-		self.put_obj(Ball('blue'), 1, 3)
+		ball1 = Ball('yellow')
+		ball1.id = "ball_1"
+		# ball2 = Ball('yellow')
+		# ball2.id = "ball_2"
+		# ball3 = Ball('yellow')
+		# ball3.id = "ball_3"
+		# ball4 = Ball('yellow')
+		# ball4.id = "ball_4"
+		# ball5 = Ball('blue')
+		# ball5.id = "ball_5"
+		ball6 = Ball('blue')
+		ball6.id = "ball_6"
+		self.put_obj(ball1, 3, 3)
+		# self.put_obj(ball2, 2, 6)
+		# self.put_obj(ball3, 4, 5)
+		# self.put_obj(ball4, 2, 7)
+		# self.put_obj(ball5, 7, 7)
+		self.put_obj(ball6, 1, 3)
 		self.place_agent()
 		
 		# generate mission
@@ -74,6 +87,22 @@ class MyEnv(MiniGridEnv):
 		info["rm_state"] = self.rm.get_current_int_state()
 		return obs, info
 	
+	def add_obs_noise(self, obs, noise_prob=0.1, corrupt_agent_cell=False):
+		noisy_obs = obs.copy()
+		image = noisy_obs['image'].copy()
+		
+		mask = np.random.random(image.shape[:2]) < noise_prob
+
+		if not corrupt_agent_cell:
+				mask[self.agent_pos[0], self.agent_pos[1]] = False
+		
+		image[mask, 0] = np.random.randint(0, len(COLOR_TO_IDX), mask.sum())
+		image[mask, 1] = np.random.randint(0, len(OBJECT_TO_IDX), mask.sum())
+		image[mask, 2] = np.random.randint(0, len(STATE_TO_IDX), mask.sum())
+
+		noisy_obs["image"] = image
+		return noisy_obs
+
 	def step(
 				self, action: ActType
 		) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
@@ -90,7 +119,7 @@ class MyEnv(MiniGridEnv):
 				# Get the contents of the cell in front of the agent
 				fwd_cell = self.grid.get(*fwd_pos)
 				
-				picked_up = (-1, -1)
+				picked_up = None
 
 				# Rotate left
 				if action == self.actions.left:
@@ -110,7 +139,7 @@ class MyEnv(MiniGridEnv):
 				# Pick up an object
 				elif action == self.actions.pickup:
 						if fwd_cell and fwd_cell.can_pickup():
-							picked_up = tuple(fwd_pos)
+							picked_up = getattr(fwd_cell, "id", None)
 							self.grid.set(fwd_pos[0], fwd_pos[1], None)
 
 				# Done action (not used by default)
@@ -129,17 +158,17 @@ class MyEnv(MiniGridEnv):
 
 				obs = self.gen_obs()
 		
-				# if terminated:
-				# 	print("terminated")
-				# obs["rm_state"] = self.rm.get_current_int_state()
 				rm_state = self.rm.get_current_int_state()
+		
+				# TODO: return noisy obs, have the RM transition taking in the noisy picked-up observation
+				noisy_obs = self.add_obs_noise(obs, noise_prob=0.1, corrupt_agent_cell=False)
+
 				terminated, reward, _ = self.rm.transition(picked_up)
+    
 				if self.step_count >= self.max_steps:
 					truncated = True
-					# print("truncated")
      
-
-				return obs, reward, terminated, truncated, {"rm_state": rm_state}
+				return noisy_obs, reward, terminated, truncated, {"rm_state": rm_state}
 		
 	@staticmethod
 	def _gen_mission():
@@ -164,3 +193,4 @@ gym.register(
 )
 
 # TODO: reward shaping for first-order RM
+# assumption: noisy observation and noisy picked-up detection, and these two are independent of each other, and the noise is symmetric (false positive and false negative have the same probability)

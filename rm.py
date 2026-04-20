@@ -103,3 +103,5 @@ class RewardMachine():
 # transition will set reward straight away
 
 # reward of reward machine is not cumulative
+
+# ASSUMPTION: we know beforehand all the balls that we need to pick up / in environment
