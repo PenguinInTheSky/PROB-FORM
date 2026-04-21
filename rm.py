@@ -1,28 +1,31 @@
 from collections import defaultdict
+from objects import CheckPoint
+from minigrid.core.world_object import Goal
 
 class RewardMachine():
   def __init__(self, env):
     self.env = env
-    self.states = ['u0', 'u1', 'uA']
+    
+    self.states = ['u0', 'u1', 'u2', 'uA']
     self.start_state = 'u0'
-    self.state_to_int = {'u0': 0, 'u1': 1, 'uA': 2}
+    self.state_to_int = {'u0': 0, 'u1': 1, 'u2': 2, 'uA': 3}
     self.current_state = self.start_state
     self.accept_state = 'uA'
     self.hb = defaultdict(list)
     
-    # TODO: put these env specific coordinates in a constant file or something else to avoid magic number
-    # TODO: use coordinates for now, might have to change in the future
-    self.hb['yellow'] = [(3, 3)]#, (2, 6), (4, 5), (2, 7)]
-    self.hb['blue'] = [(1, 3)]
-    
     self.state_transitions = defaultdict(list)
-    self.state_transitions[('u0', 'u1')] = ('universal', 'yellow')
-    self.state_transitions[('u1', 'uA')] = ('universal', 'blue')
+    self.state_transitions[('u0', 'u1')] = ('existential', 'blue', [])
+    self.state_transitions[('u1', 'u2')] = ('universal', 'yellow', [])
+    self.state_transitions[('u2', 'u3')] = ('propositional', 'purple', ['o7'])
+    self.state_transitions[('u3', 'uA')] = ('propositional', 'goal', [])
+    self.state_transitions[('uA', 'uA')] = ('propositional', 'True', [])
     
     self.rewards = defaultdict(float)
     # TODO: reward shaping
     self.rewards[('u0', 'u1')] = 0.6
-    self.rewards[('u1', 'uA')] = 1.0
+    self.rewards[('u1', 'u2')] = 0.8
+    self.rewards[('u2', 'u3')] = 1.0
+    self.rewards[('u3', 'uA')] = 1.0
     
     # TODO: buffer for transitions
     # renew the buffer every time we transition to a new state
@@ -33,7 +36,7 @@ class RewardMachine():
   
   @staticmethod
   def get_num_states():
-    return 3
+    return 5
   
   def get_current_int_state(self):
     return self.state_to_int[self.current_state]
@@ -50,7 +53,7 @@ class RewardMachine():
   def get_reward(self):
     return self.reward
   
-  def transition(self, pos):
+  def transition(self, obj: CheckPoint):
     reward = 0
     self.step_count += 1
     # TODO: use pos for now, might have to change to obs in the future
@@ -59,34 +62,47 @@ class RewardMachine():
     
     # print("Adding obs to buffer and checking for state transition...")
     # print("Current state is:", self.current_state)
-    # 1. add obs to buffer
-    if pos in self.hb['yellow']:
-      # print("Adding yellow ball at position", pos, "to buffer")
-      self.buffer.append(('yellow', pos))
-    if pos in self.hb['blue']:
-      # print("Adding blue ball at position", pos, "to buffer")
-      self.buffer.append(('blue', pos))
-    if pos in self.hb['goal']:
-      # print("Adding goal at position", pos, "to buffer")
-      self.buffer.append(('goal', pos))
+    
+    # 1. add obs to buffer      
+    if obj != None:
+      self.buffer.append(self.env.language.obj_to_const[obj])
       
     # 2. check if we can transition to a new state based on the buffer and the state transition rules
     for next_state in self.states:
       if (self.current_state, next_state) in self.state_transitions:
-        transition_type, required_obs = self.state_transitions[(self.current_state, next_state)]
+        transition_type, predicate, constants = self.state_transitions[(self.current_state, next_state)]
+        # Note: universal unary predicates only
         if transition_type == 'universal':
-          if len(self.hb[required_obs]) == len([obs for obs in self.buffer if obs[0] == required_obs]):
+          count = len([const for const in self.env.constants if self.env.language.check_rule(predicate, [const])])
+          count_in_buffer = len([const for const in self.buffer if self.env.language.check_rule(predicate, [const])])
+          if count_in_buffer == count:
             self.buffer = []
             reward = self.rewards[(self.current_state, next_state)]
             self.current_state = next_state
             break
+          
         elif transition_type == 'existential':
-          if any(obs for obs in self.buffer if obs[0] == required_obs):
+          if any(const for const in self.buffer if self.env.language.check_rule(predicate, [const])):
             self.buffer = []
             reward = self.rewards[(self.current_state, next_state)]
             self.current_state = next_state
             break
-      
+        
+        elif transition_type == 'propositional':
+          if predicate == True:
+            break
+          if predicate == "goal":
+            if isinstance(obj, Goal):
+              self.buffer = []
+              reward = self.rewards[(self.current_state, next_state)]
+              self.current_state = next_state
+              break
+          # make sure all constants are in buffer         
+          if all(const in self.buffer for const in constants):
+            self.buffer = []
+            reward = self.rewards[(self.current_state, next_state)]
+            self.current_state = next_state
+            break
             
     # 3. if we can transition, update the current state and reset the buffer, and set the reward based on the rewards dict
     # if we cannot transition, do nothing

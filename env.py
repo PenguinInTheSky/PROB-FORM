@@ -17,6 +17,7 @@ import numpy as np
 from objects import CheckPoint
 
 from rm import RewardMachine
+from language import Language
 
 class MyEnv(MiniGridEnv):
 	# define action space
@@ -42,6 +43,10 @@ class MyEnv(MiniGridEnv):
 		self.actions = MyEnv.Actions
 		self.action_space = gym.spaces.Discrete(len(self.actions))
 		self.rm = RewardMachine(self)
+		self.constants = ["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11"]
+		self.predicates = ["yellow", "blue", "purple", "red", "grey", "green", "goal"]
+		self.language = Language(self.constants, self.predicates)
+
 
 	def _gen_grid(self, width=13, height=13):
 		# size 10 * 10, wall at column 5, gap at (5, 5), goal at (9, 9), agent at (1, 1), yellow balls at (3, 3), (2, 6), (4, 5), (2, 7), blue ball at (7, 7), (1, 3)
@@ -59,13 +64,21 @@ class MyEnv(MiniGridEnv):
 				
 		self.objects = []
   
+		tmp = 0
 		# generate and place checkpoints: 2 yellow, 2 red, 2 blue, 2 purple, 2 grey, 2 green 
 		for c in ["yellow", "red", "blue", "purple", "grey", "green"]:
 			# place object randomly in the grid, avoid placing on walls
 			for _ in range(2):
 				checkpoint = CheckPoint(c)
+    
+				# add mapping to language
+				self.language.add_constant_mapping(self.constants[tmp], checkpoint)
+				# add rules to language
+				self.language.add_rule(c, [self.constants[tmp]])
+
 				self.objects.append(checkpoint)
 				self.place_obj(checkpoint, top=(1, 1), size=(width - 3, height - 3))
+				tmp += 1
 		
 		# generate and place goal
 		goal = Goal()
@@ -88,8 +101,8 @@ class MyEnv(MiniGridEnv):
 		return obs, info
 	
 	def step(
-     	self,
-      	action: ActType
+		 	self,
+				action: ActType
 	) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:	
 		self.step_count += 1
 
@@ -137,6 +150,9 @@ class MyEnv(MiniGridEnv):
 			truncated = True
 
 		return obs, reward, terminated, truncated, {"rm_state": rm_state}
+
+	def get_objects(self):
+		return self.objects
 
 	@staticmethod
 	def _gen_mission():
