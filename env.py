@@ -14,6 +14,8 @@ from typing import Any, Iterable, SupportsFloat, TypeVar
 from minigrid.wrappers import FlatObsWrapper, FullyObsWrapper
 import numpy as np
 
+from objects import CheckPoint
+
 from rm import RewardMachine
 
 class MyEnv(MiniGridEnv):
@@ -22,12 +24,12 @@ class MyEnv(MiniGridEnv):
 		left = 0
 		right = 1
 		forward = 2
-		pickup = 3
+		# pickup = 3
 		# drop = 4
 		# toggle = 5
 		# done = 4 # 6
 	
-	def __init__(self, size=5, **kwargs):
+	def __init__(self, size=13, **kwargs):
 		mission_space = MissionSpace(mission_func=self._gen_mission)
 		super().__init__(
 			mission_space=mission_space,
@@ -40,24 +42,35 @@ class MyEnv(MiniGridEnv):
 		self.actions = MyEnv.Actions
 		self.action_space = gym.spaces.Discrete(len(self.actions))
 		self.rm = RewardMachine(self)
-		
-	def _gen_grid(self, width, height):
+
+	def _gen_grid(self, width=13, height=13):
 		# size 10 * 10, wall at column 5, gap at (5, 5), goal at (9, 9), agent at (1, 1), yellow balls at (3, 3), (2, 6), (4, 5), (2, 7), blue ball at (7, 7), (1, 3)
 		self.grid = Grid(width, height)
 		self.grid.wall_rect(0, 0, width, height)
 		
-		# generate walls with a gap at (5, 5)
-		# for i in range(1, height-1):
-		# 	if i != 5:
-		# 		self.grid.set(5, i, Wall())
+		# internal walls
+		self.grid.vert_wall(6, 1, 2)
+		self.grid.vert_wall(6, 4, 6)
+		self.grid.vert_wall(6, 11, 1)
+		self.grid.horz_wall(1, 6, 1)
+		self.grid.horz_wall(3, 6, 3)
+		self.grid.horz_wall(7, 7, 2)
+		self.grid.horz_wall(10, 7, 2)
 				
-		# place objects
-		self.put_obj(Ball('yellow'), 3, 3)
-		# self.put_obj(Ball('yellow'), 2, 6)
-		# self.put_obj(Ball('yellow'), 4, 5)
-		# self.put_obj(Ball('yellow'), 2, 7)
-		# self.put_obj(Ball('blue'), 7, 7)
-		self.put_obj(Ball('blue'), 1, 3)
+		self.objects = []
+  
+		# generate and place checkpoints: 2 yellow, 2 red, 2 blue, 2 purple, 2 grey, 2 green 
+		for c in ["yellow", "red", "blue", "purple", "grey", "green"]:
+			# place object randomly in the grid, avoid placing on walls
+			for _ in range(2):
+				checkpoint = CheckPoint(c)
+				self.objects.append(checkpoint)
+				self.place_obj(checkpoint, top=(1, 1), size=(width - 3, height - 3))
+		
+		# generate and place goal
+		goal = Goal()
+		self.objects.append(goal)
+		self.put_obj(goal, width - 2, height - 2)
 		self.place_agent()
 		
 		# generate mission
@@ -75,72 +88,56 @@ class MyEnv(MiniGridEnv):
 		return obs, info
 	
 	def step(
-				self, action: ActType
-		) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
-		
-				self.step_count += 1
+     	self,
+      	action: ActType
+	) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:	
+		self.step_count += 1
 
-				reward = 0
-				terminated = False
-				truncated = False
+		reward = 0
+		terminated = False
+		truncated = False
 
-				# Get the position in front of the agent
-				fwd_pos = self.front_pos
+		# Get the position in front of the agent
+		fwd_pos = self.front_pos
 
-				# Get the contents of the cell in front of the agent
-				fwd_cell = self.grid.get(*fwd_pos)
-				
-				picked_up = (-1, -1)
+		# Get the contents of the cell in front of the agent
+		fwd_cell = self.grid.get(*fwd_pos)
 
-				# Rotate left
-				if action == self.actions.left:
-						self.agent_dir -= 1
-						if self.agent_dir < 0:
-								self.agent_dir += 4
+		# Rotate left
+		if action == self.actions.left:
+			self.agent_dir -= 1
+			if self.agent_dir < 0:
+				self.agent_dir += 4
 
-				# Rotate right
-				elif action == self.actions.right:
-						self.agent_dir = (self.agent_dir + 1) % 4
+		# Rotate right
+		elif action == self.actions.right:
+			self.agent_dir = (self.agent_dir + 1) % 4
 
-				# Move forward
-				elif action == self.actions.forward:
-						if fwd_cell is None or fwd_cell.can_overlap():
-								self.agent_pos = tuple(fwd_pos)
+		# Move forward
+		elif action == self.actions.forward:
+			if fwd_cell is None or fwd_cell.can_overlap():
+				self.agent_pos = tuple(fwd_pos)
 
-				# Pick up an object
-				elif action == self.actions.pickup:
-						if fwd_cell and fwd_cell.can_pickup():
-							picked_up = tuple(fwd_pos)
-							self.grid.set(fwd_pos[0], fwd_pos[1], None)
+		else:
+			raise ValueError(f"Unknown action: {action}")
 
-				# Done action (not used by default)
-				elif action == self.actions.done:
-						pass
+		if self.step_count >= self.max_steps:
+			truncated = True
 
-				else:
-						raise ValueError(f"Unknown action: {action}")
+		if self.render_mode == "human":
+			self.render()
 
+		obs = self.gen_obs()
 
-				if self.step_count >= self.max_steps:
-						truncated = True
+		rm_state = self.rm.get_current_int_state()
+		# CHECK: fwd_cell can be a ball?
+		print("Forward cell is:", fwd_cell)
+		terminated, reward, _ = self.rm.transition(self.grid.get(*self.agent_pos))
+		if self.step_count >= self.max_steps:
+			truncated = True
 
-				if self.render_mode == "human":
-						self.render()
+		return obs, reward, terminated, truncated, {"rm_state": rm_state}
 
-				obs = self.gen_obs()
-		
-				# if terminated:
-				# 	print("terminated")
-				# obs["rm_state"] = self.rm.get_current_int_state()
-				rm_state = self.rm.get_current_int_state()
-				terminated, reward, _ = self.rm.transition(picked_up)
-				if self.step_count >= self.max_steps:
-					truncated = True
-					# print("truncated")
-     
-
-				return obs, reward, terminated, truncated, {"rm_state": rm_state}
-		
 	@staticmethod
 	def _gen_mission():
 		return "fetch all yellow balls, then one blue ball, and reach the goal"
