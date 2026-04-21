@@ -210,5 +210,14 @@ gym.register(
 )
 
 
-# TODO: reward shaping for first-order RM
-# assumption: noisy observation and noisy picked-up detection, and these two are independent of each other, and the noise is symmetric (false positive and false negative have the same probability)
+# assumptions
+# robot picks up item which is detected seperately from observations
+# robot has independent noise for observation and picked-up detection
+# robot knows exactly what balls are there in the environment
+# robot doesn't need to reach the goal position
+
+# so need to check if the implementation fits the simulation, for it is rather different from leo's code
+# and check if the simulated noise is reasonable for real-world scenarios
+# also need to expand the training environment, with walls, and more balls
+# need to log the working progress in order to support report writing
+# reward machine knows about all the balls

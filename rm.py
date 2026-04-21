@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from constants import ADD_TO_BUFFER_PROB_THRESHOLD
+
 class RewardMachine():
   def __init__(self, env):
     self.env = env
@@ -27,6 +29,7 @@ class RewardMachine():
     # TODO: buffer for transitions
     # renew the buffer every time we transition to a new state
     self.buffer = []
+    self.noisy_buffer = dict() # obj_id -> prob of being picked up, only for objects that are not yet added to the buffer
 
     self.reward = 0
     self.step_count = 0
@@ -49,6 +52,26 @@ class RewardMachine():
   
   def get_reward(self):
     return self.reward
+  
+  def noisy_transition(self, labels):
+    reward = 0
+    self.step_count += 1
+    
+    # 1. update buffer with noisy labels
+    for (obj_id, prob) in labels:
+      if prob > ADD_TO_BUFFER_PROB_THRESHOLD:
+        # add obj_id to buffer with some probability
+        if obj_id not in self.noisy_buffer:
+          self.noisy_buffer[obj_id] = prob
+        else:
+          self.noisy_buffer[obj_id] = max(self.noisy_buffer[obj_id], prob)
+    
+    # 2. check transition with new buffer for universal condition
+    
+    # 3. check transition with new buffer for existential condition
+    
+    # 4. reset buffer if transition happens, and update reward and current state accordingly
+    pass
   
   def transition(self, pos):
     reward = 0
