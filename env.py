@@ -42,7 +42,10 @@ class MyEnv(MiniGridEnv):
 		# redefine default action space
 		self.actions = MyEnv.Actions
 		self.action_space = gym.spaces.Discrete(len(self.actions))
+  
 		self.rm = RewardMachine(self)
+		
+		# initialize the language
 		self.constants = ["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11"]
 		self.predicates = ["yellow", "blue", "purple", "red", "grey", "green", "goal"]
 		self.language = Language(self.constants, self.predicates)
@@ -62,6 +65,7 @@ class MyEnv(MiniGridEnv):
 		self.grid.horz_wall(7, 7, 2)
 		self.grid.horz_wall(10, 7, 2)
 				
+		# add objects, including checkpoints and goal
 		self.objects = []
   
 		tmp = 0
@@ -70,7 +74,7 @@ class MyEnv(MiniGridEnv):
 			# place object randomly in the grid, avoid placing on walls
 			for _ in range(2):
 				checkpoint = CheckPoint(c)
-    
+	
 				# add mapping to language
 				self.language.add_constant_mapping(self.constants[tmp], checkpoint)
 				# add rules to language
@@ -143,9 +147,11 @@ class MyEnv(MiniGridEnv):
 		obs = self.gen_obs()
 
 		rm_state = self.rm.get_current_int_state()
-		# CHECK: fwd_cell can be a ball?
-		print("Forward cell is:", fwd_cell)
-		terminated, reward, _ = self.rm.transition(self.grid.get(*self.agent_pos))
+		# print("Forward cell is:", self.language.get_constant(fwd_cell))
+		object = self.grid.get(*self.agent_pos)
+		# print("Object at current position is:", object)
+		terminated, reward, _ = self.rm.transition(object)
+		# print("Move made, the next RM state is:", self.rm.get_current_int_state())
 		if self.step_count >= self.max_steps:
 			truncated = True
 

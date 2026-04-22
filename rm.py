@@ -1,14 +1,14 @@
 from collections import defaultdict
 from objects import CheckPoint
-from minigrid.core.world_object import Goal
+from minigrid.core.world_object import Goal, WorldObj
 
 class RewardMachine():
   def __init__(self, env):
     self.env = env
     
-    self.states = ['u0', 'u1', 'u2', 'uA']
+    self.states = ['u0', 'u1', 'u2', 'u3', 'uA']
     self.start_state = 'u0'
-    self.state_to_int = {'u0': 0, 'u1': 1, 'u2': 2, 'uA': 3}
+    self.state_to_int = {'u0': 0, 'u1': 1, 'u2': 2, 'u3': 3, 'uA': 4}
     self.current_state = self.start_state
     self.accept_state = 'uA'
     self.hb = defaultdict(list)
@@ -29,6 +29,7 @@ class RewardMachine():
     
     # TODO: buffer for transitions
     # renew the buffer every time we transition to a new state
+    # buffer contains the key observational objects (checkpoints and goal) that the agent has seen since the last state transition
     self.buffer = []
 
     self.reward = 0
@@ -53,7 +54,7 @@ class RewardMachine():
   def get_reward(self):
     return self.reward
   
-  def transition(self, obj: CheckPoint):
+  def transition(self, obj: WorldObj):
     reward = 0
     self.step_count += 1
     # TODO: use pos for now, might have to change to obs in the future
@@ -64,17 +65,22 @@ class RewardMachine():
     # print("Current state is:", self.current_state)
     
     # 1. add obs to buffer      
-    if obj != None:
-      self.buffer.append(self.env.language.obj_to_const[obj])
+    if obj is not None:
+      self.buffer.append(obj)
       
     # 2. check if we can transition to a new state based on the buffer and the state transition rules
+    # print("Next state candidates are:", [next_state for next_state in self.states if (self.current_state, next_state) in self.state_transitions])
     for next_state in self.states:
       if (self.current_state, next_state) in self.state_transitions:
         transition_type, predicate, constants = self.state_transitions[(self.current_state, next_state)]
         # Note: universal unary predicates only
+        # print("Checking transition from", self.current_state, "to", next_state)
+        # print("Transition type:", transition_type)
+        # print("Predicate:", predicate)
+        # print("Constants:", constants)
         if transition_type == 'universal':
           count = len([const for const in self.env.constants if self.env.language.check_rule(predicate, [const])])
-          count_in_buffer = len([const for const in self.buffer if self.env.language.check_rule(predicate, [const])])
+          count_in_buffer = len([obj for obj in self.buffer if self.env.language.get_constant(obj) != None and self.env.language.check_rule(predicate, [self.env.language.get_constant(obj)])])
           if count_in_buffer == count:
             self.buffer = []
             reward = self.rewards[(self.current_state, next_state)]
@@ -82,23 +88,26 @@ class RewardMachine():
             break
           
         elif transition_type == 'existential':
-          if any(const for const in self.buffer if self.env.language.check_rule(predicate, [const])):
+          if any(obj for obj in self.buffer if self.env.language.get_constant(obj) != None and self.env.language.check_rule(predicate, [self.env.language.get_constant(obj)])):
             self.buffer = []
             reward = self.rewards[(self.current_state, next_state)]
             self.current_state = next_state
             break
         
         elif transition_type == 'propositional':
+          # print("Checking propositional transition with constants:", constants)
+          # print("With predicate:", predicate)
           if predicate == True:
             break
-          if predicate == "goal":
+          elif predicate == "goal":
             if isinstance(obj, Goal):
               self.buffer = []
               reward = self.rewards[(self.current_state, next_state)]
               self.current_state = next_state
               break
           # make sure all constants are in buffer         
-          if all(const in self.buffer for const in constants):
+          # all constant in constants must be guarenteed to be mapped to an object beforehand during task and environment definition
+          elif all(self.env.language.get_object(const) in self.buffer for const in constants):
             self.buffer = []
             reward = self.rewards[(self.current_state, next_state)]
             self.current_state = next_state
