@@ -178,7 +178,6 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
-
     # env setup
     envs = gym.vector.SyncVectorEnv(
         [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
@@ -346,7 +345,7 @@ if __name__ == "__main__":
                 if args.target_kl is not None and approx_kl > args.target_kl:
                     break
 
-            y_pred, y_true = b_values[mb_inds].cpu().numpy(), b_returns[mb_inds].cpu().numpy()
+            y_pred, y_true = b_values[b_rm_inds[rm_state]].cpu().numpy(), b_returns[b_rm_inds[rm_state]].cpu().numpy()
             var_y = np.var(y_true)
             explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 

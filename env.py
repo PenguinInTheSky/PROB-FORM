@@ -35,7 +35,7 @@ class MyEnv(MiniGridEnv):
 		super().__init__(
 			mission_space=mission_space,
 			grid_size=size,
-			max_steps=200,
+			max_steps=1500,
 			**kwargs,
 		)
 		
@@ -46,10 +46,34 @@ class MyEnv(MiniGridEnv):
 		self.rm = RewardMachine(self)
 		
 		# initialize the language
-		self.constants = ["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11"]
-		self.predicates = ["yellow", "blue", "purple", "red", "grey", "green", "goal"]
+		self.constants = ["o0", "o1"]
+		self.predicates = ["blue", "yellow"]
+		# self.constants = ["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11"]
+		# self.predicates = ["yellow", "blue", "purple", "red", "grey", "green", "goal"]
 		self.language = Language(self.constants, self.predicates)
 
+	def __str__(self):
+		lines = []
+		for y in range(self.height):
+			row = []
+			for x in range(self.width):
+				if self.agent_pos is not None and (x, y) == tuple(self.agent_pos):
+					row.append('A')
+				else:
+					cell = self.grid.get(x, y)
+					if cell is None:
+						row.append('.')
+					elif cell.type == 'wall':
+						row.append('#')
+					elif cell.type == 'checkpoint':
+						row.append(cell.color[0].upper())
+					elif cell.type == 'goal':
+						row.append('G')
+					else:
+						row.append('?')
+			lines.append(' '.join(row))
+		lines.append(f"RM state: {self.rm.current_state} | steps: {self.step_count}/{self.max_steps}")
+		return '\n'.join(lines)
 
 	def _gen_grid(self, width=13, height=13):
 		# size 10 * 10, wall at column 5, gap at (5, 5), goal at (9, 9), agent at (1, 1), yellow balls at (3, 3), (2, 6), (4, 5), (2, 7), blue ball at (7, 7), (1, 3)
@@ -57,22 +81,22 @@ class MyEnv(MiniGridEnv):
 		self.grid.wall_rect(0, 0, width, height)
 		
 		# internal walls
-		self.grid.vert_wall(6, 1, 2)
-		self.grid.vert_wall(6, 4, 6)
-		self.grid.vert_wall(6, 11, 1)
-		self.grid.horz_wall(1, 6, 1)
-		self.grid.horz_wall(3, 6, 3)
-		self.grid.horz_wall(7, 7, 2)
-		self.grid.horz_wall(10, 7, 2)
+		# self.grid.vert_wall(6, 1, 2)
+		# self.grid.vert_wall(6, 4, 6)
+		# self.grid.vert_wall(6, 11, 1)
+		# self.grid.horz_wall(1, 6, 1)
+		# self.grid.horz_wall(3, 6, 3)
+		# self.grid.horz_wall(7, 7, 2)
+		# self.grid.horz_wall(10, 7, 2)
 				
 		# add objects, including checkpoints and goal
 		self.objects = []
   
 		tmp = 0
 		# generate and place checkpoints: 2 yellow, 2 red, 2 blue, 2 purple, 2 grey, 2 green 
-		for c in ["yellow", "red", "blue", "purple", "grey", "green"]:
+		for c in ["blue", "yellow"]: # ["yellow", "blue", "red", "purple", "grey", "green"]:
 			# place object randomly in the grid, avoid placing on walls
-			for _ in range(2):
+			for _ in range(1): # 2
 				checkpoint = CheckPoint(c)
 	
 				# add mapping to language
@@ -85,9 +109,9 @@ class MyEnv(MiniGridEnv):
 				tmp += 1
 		
 		# generate and place goal
-		goal = Goal()
-		self.objects.append(goal)
-		self.put_obj(goal, width - 2, height - 2)
+		# goal = Goal()
+		# self.objects.append(goal)
+		# self.put_obj(goal, width - 2, height - 2)
 		self.place_agent()
 		
 		# generate mission
@@ -146,11 +170,11 @@ class MyEnv(MiniGridEnv):
 
 		obs = self.gen_obs()
 
-		rm_state = self.rm.get_current_int_state()
 		# print("Forward cell is:", self.language.get_constant(fwd_cell))
 		object = self.grid.get(*self.agent_pos)
 		# print("Object at current position is:", object)
 		terminated, reward, _ = self.rm.transition(object)
+		rm_state = self.rm.get_current_int_state()
 		# print("Move made, the next RM state is:", self.rm.get_current_int_state())
 		if self.step_count >= self.max_steps:
 			truncated = True

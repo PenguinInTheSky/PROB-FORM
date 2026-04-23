@@ -6,26 +6,26 @@ class RewardMachine():
   def __init__(self, env):
     self.env = env
     
-    self.states = ['u0', 'u1', 'u2', 'u3', 'uA']
+    self.states = ['u0', 'u1', 'u2']#, 'u3', 'uA']
     self.start_state = 'u0'
-    self.state_to_int = {'u0': 0, 'u1': 1, 'u2': 2, 'u3': 3, 'uA': 4}
+    self.state_to_int = {'u0': 0, 'u1': 1, 'u2': 2}#, 'u3': 3, 'uA': 4}
     self.current_state = self.start_state
-    self.accept_state = 'uA'
+    self.accept_state = 'u2'#'uA'
     self.hb = defaultdict(list)
     
     self.state_transitions = defaultdict(list)
     self.state_transitions[('u0', 'u1')] = ('existential', 'blue', [])
     self.state_transitions[('u1', 'u2')] = ('universal', 'yellow', [])
-    self.state_transitions[('u2', 'u3')] = ('propositional', 'purple', ['o7'])
-    self.state_transitions[('u3', 'uA')] = ('propositional', 'goal', [])
-    self.state_transitions[('uA', 'uA')] = ('propositional', 'True', [])
+    # self.state_transitions[('u2', 'u3')] = ('propositional', 'purple', ['o7'])
+    # self.state_transitions[('u3', 'uA')] = ('propositional', 'goal', [])
+    # self.state_transitions[('uA', 'uA')] = ('propositional', 'True', [])
     
     self.rewards = defaultdict(float)
     # TODO: reward shaping
-    self.rewards[('u0', 'u1')] = 0.6
-    self.rewards[('u1', 'u2')] = 0.8
-    self.rewards[('u2', 'u3')] = 1.0
-    self.rewards[('u3', 'uA')] = 1.0
+    self.rewards[('u0', 'u1')] = 0.8
+    self.rewards[('u1', 'u2')] = 0.7
+    # self.rewards[('u2', 'u3')] = 0.6
+    # self.rewards[('u3', 'uA')] = 0.5
     
     # TODO: buffer for transitions
     # renew the buffer every time we transition to a new state
@@ -37,7 +37,7 @@ class RewardMachine():
   
   @staticmethod
   def get_num_states():
-    return 5
+    return 3  
   
   def get_current_int_state(self):
     return self.state_to_int[self.current_state]
