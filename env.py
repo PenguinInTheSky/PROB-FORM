@@ -192,15 +192,13 @@ class MyEnv(MiniGridEnv):
 		object_set = set()
 		if object is not None:
 			object_set.add(self.language.get_constant(object))
-		print(object_set)
+		# print(object_set)
 		labels = self.label_extractor.get_labels(obs, {"observations": object_set})
-		print("Object observed is:", object)
-		print("Labels observed are:", labels)
+		# print("Object observed is:", object)
+		# print("Labels observed are:", labels)
   
-		# TODO: define self.label_extractor and pass observations to {}
-	
 		# transition the reward machine with the object
-		terminated, reward, _ = self.rm.transition(object)
+		terminated, reward, _ = self.rm.noisy_transition(labels)
 		rm_state = self.rm.get_current_int_state()
 	
 		# check if max steps reached

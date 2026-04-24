@@ -2,8 +2,8 @@ from collections import defaultdict
 from objects import CheckPoint
 from minigrid.core.world_object import Goal, WorldObj
 
-from constants import ADD_TO_BUFFER_PROB_THRESHOLD
-
+from constants import ADD_TO_BUFFER_PROB_THRESHOLD, PROB_TRANSITION_THRESHOLD_EXISTENTIAL, PROB_TRANSITION_THRESHOLD_UNIVERSAL
+import numpy as np 
 class RewardMachine():
   def __init__(self, env):
     self.env = env
@@ -33,7 +33,7 @@ class RewardMachine():
     # renew the buffer every time we transition to a new state
     # buffer contains the key observational objects (checkpoints and goal) that the agent has seen since the last state transition
     self.buffer = []
-    self.noisy_buffer = dict() # obj_id -> prob of being picked up, only for objects that are not yet added to the buffer
+    self.noisy_buffer = dict() # label -> prob of being picked up, only for objects that are not yet added to the buffer
 
     self.reward = 0
     self.step_count = 0
@@ -58,19 +58,79 @@ class RewardMachine():
     return self.reward
   
   def noisy_transition(self, labels):
+    print(labels)
     reward = 0
     self.step_count += 1
     
     # 1. update buffer with noisy labels
-    for (obj_id, prob) in labels:
+    # for key and value in labels, if value > threshold, add key to buffer with some probability
+    for (label, prob) in labels.items():
       if prob > ADD_TO_BUFFER_PROB_THRESHOLD:
         # add obj_id to buffer with some probability
-        if obj_id not in self.noisy_buffer:
-          self.noisy_buffer[obj_id] = prob
+        if label not in self.noisy_buffer:
+          self.noisy_buffer[label] = prob
         else:
-          self.noisy_buffer[obj_id] = max(self.noisy_buffer[obj_id], prob)
+          self.noisy_buffer[label] = max(self.noisy_buffer[label], prob)
     
     # 2. check transition with new buffer for universal condition
+    # Mote: no seperate goal check 
+    for next_state in self.states:
+      if (self.current_state, next_state) in self.state_transitions:
+        transition_type, predicate, constants = self.state_transitions[(self.current_state, next_state)]
+        # Note: universal unary predicates only
+        print("Checking transition from", self.current_state, "to", next_state)
+        print("Transition type:", transition_type)
+        print("Predicate:", predicate)
+        print("Constants:", constants)
+        if transition_type == 'universal':
+          min_prob = np.min([
+            self.noisy_buffer[label] if label in self.noisy_buffer else 0.0
+            for label in self.env.constants if self.env.language.check_rule(predicate, [label])
+          ])
+          print("Labels that satisfy the predicate are:", [label for label in self.env.constants if self.env.language.check_rule(predicate, [label])])
+          if min_prob > PROB_TRANSITION_THRESHOLD_UNIVERSAL:
+            self.noisy_buffer = {}
+            reward = self.rewards[(self.current_state, next_state)]
+            self.current_state = next_state
+            break
+          
+        elif transition_type == 'existential':
+          max_prob = np.max([
+            self.noisy_buffer[label] if label in self.noisy_buffer else 0.0
+            for label in self.env.constants if self.env.language.check_rule(predicate, [label])
+          ])
+          print("Labels that satisfy the predicate are:", [label for label in self.env.constants if self.env.language.check_rule(predicate, [label])])
+          if max_prob > PROB_TRANSITION_THRESHOLD_EXISTENTIAL:
+            self.noisy_buffer = {}
+            reward = self.rewards[(self.current_state, next_state)]
+            self.current_state = next_state
+            break
+        elif transition_type == 'propositional':
+          # print("Checking propositional transition with constants:", constants)
+          # print("With predicate:", predicate)
+          if predicate == True:
+            self.noisy_buffer = {}
+            reward = self.rewards[(self.current_state, next_state)]
+            self.current_state = next_state
+            break
+          # make sure all constants are in buffer         
+          # all constant in constants must be guarenteed to be mapped to an object beforehand during task and environment definition
+          elif np.min(self.noisy_buffer[label] if label in self.noisy_buffer else 0.0 for label in constants) > PROB_TRANSITION_THRESHOLD_UNIVERSAL:
+            self.noisy_buffer = {}
+            reward = self.rewards[(self.current_state, next_state)]
+            self.current_state = next_state
+            break
+            
+    # 3. if we can transition, update the current state and reset the buffer, and set the reward based on the rewards dict
+    # if we cannot transition, do nothing
+    
+    # 4. return done, reward, info (perhaps)
+    print("And next state is:", self.current_state)
+    print("Reward is:", self.reward)
+    done = self.is_accepted()
+    # if done:
+      # print("Task completed!")
+    return done, reward, {}
     
     # 3. check transition with new buffer for existential condition
     
@@ -121,6 +181,9 @@ class RewardMachine():
           # print("Checking propositional transition with constants:", constants)
           # print("With predicate:", predicate)
           if predicate == True:
+            self.buffer = []
+            reward = self.rewards[(self.current_state, next_state)]
+            self.current_state = next_state
             break
           elif predicate == "goal":
             if isinstance(obj, Goal):

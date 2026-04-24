@@ -93,12 +93,10 @@ class OfficeWorldAbstractLabelExtractor(LabelExtractor):
     def get_labels(self, observation, info: dict):
         self.num_steps += 1
         # TODO: this may be slow; as we do it a number of times
-        print(self.get_label(), "is in observations:", self.get_label() in info.get("observations", set()))
         if self.get_label() in info.get("observations", set()):
             coffee_predicted = bool(self.rng.binomial(1, self.sensor_true_confidence))
         else:
             coffee_predicted = bool(1 - self.rng.binomial(1, self.sensor_false_confidence))
-        print(coffee_predicted)
         labels = {self.get_label(): self.get_label_confidence(coffee_predicted, value_true_prior=self.value_true_prior)}
         return labels
 
