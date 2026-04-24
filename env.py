@@ -13,6 +13,7 @@ from typing import Any, Iterable, SupportsFloat, TypeVar
 from minigrid.wrappers import FlatObsWrapper, FullyObsWrapper
 import numpy as np
 
+from gym_subgoal_automata_wrapper import OfficeWorldAbstractLabelExtractor, NoisyLabelingFunctionComposer
 from objects import CheckPoint
 
 from rm import RewardMachine
@@ -20,7 +21,7 @@ from language import Language
 
 from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX, STATE_TO_IDX
 
-from constants import OBS_NOISE, PICKED_UP_DETECTION_TRUE_PROB_MEAN, PICKED_UP_DETECTION_TRUE_PROB_STD, PICKED_UP_DETECTION_FALSE_PROB_MEAN, PICKED_UP_DETECTION_FALSE_PROB_STD
+from constants import SENSOR_FALSE_CONFIDENCE, SENSOR_TRUE_CONFIDENCE
 
 class MyEnv(MiniGridEnv):
 	# define action space
@@ -33,7 +34,7 @@ class MyEnv(MiniGridEnv):
 		# toggle = 5
 		# done = 4 # 6
 	
-	def __init__(self, size=13, **kwargs):
+	def __init__(self, size=5, **kwargs):
 		mission_space = MissionSpace(mission_func=self._gen_mission)
 		super().__init__(
 			mission_space=mission_space,
@@ -54,6 +55,18 @@ class MyEnv(MiniGridEnv):
 		# self.constants = ["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11"]
 		# self.predicates = ["yellow", "blue", "purple", "red", "grey", "green", "goal"]
 		self.language = Language(self.constants, self.predicates)
+
+		# create label extractors for each constant, and compose them together
+		self.label_funs = []
+		for constant in self.constants:
+			label_fun = OfficeWorldAbstractLabelExtractor(
+				sensor_true_confidence=SENSOR_TRUE_CONFIDENCE,
+				sensor_false_confidence=SENSOR_FALSE_CONFIDENCE,
+				label=constant,
+				value_true_prior= 0.5
+			)
+			self.label_funs.append(label_fun)
+		self.label_extractor = NoisyLabelingFunctionComposer(self.label_funs)
 
 	def __str__(self):
 		lines = []
@@ -78,7 +91,7 @@ class MyEnv(MiniGridEnv):
 		lines.append(f"RM state: {self.rm.current_state} | steps: {self.step_count}/{self.max_steps}")
 		return '\n'.join(lines)
 
-	def _gen_grid(self, width=13, height=13):
+	def _gen_grid(self, width=5, height=5):
 		# size 10 * 10, wall at column 5, gap at (5, 5), goal at (9, 9), agent at (1, 1), yellow balls at (3, 3), (2, 6), (4, 5), (2, 7), blue ball at (7, 7), (1, 3)
 		self.grid = Grid(width, height)
 		self.grid.wall_rect(0, 0, width, height)
@@ -130,41 +143,6 @@ class MyEnv(MiniGridEnv):
 		self.rm.reset()
 		info["rm_state"] = self.rm.get_current_int_state()
 		return obs, info
-	
-	# add noise the robot's observation of the environment
-	def add_obs_noise(self, obs, corrupt_agent_cell=False):
-		noisy_obs = obs.copy()
-		image = noisy_obs['image'].copy()
-		
-		# decide which cells to corrupt
-		mask = np.random.random(image.shape[:2]) < OBS_NOISE
-
-		if not corrupt_agent_cell:
-				mask[self.agent_pos[0], self.agent_pos[1]] = False
-		
-		# corrupt the selected cells for each channel
-		image[mask, 0] = np.random.randint(0, len(COLOR_TO_IDX), mask.sum())
-		image[mask, 1] = np.random.randint(0, len(OBJECT_TO_IDX), mask.sum())
-		image[mask, 2] = np.random.randint(0, len(STATE_TO_IDX), mask.sum())
-
-		noisy_obs["image"] = image
-		return noisy_obs
-
-
-	# add noise to the robot's detection of the item it's picking up	
-	def add_picked_up_detection_noise(self, pick_up_object_id: str):
-		# get gaussian probability of true detection, including None
-		true_prob = np.random.normal(PICKED_UP_DETECTION_TRUE_PROB_MEAN, PICKED_UP_DETECTION_TRUE_PROB_STD)
-		# get gaussian probability of false detection
-		false_probs = np.random.normal(PICKED_UP_DETECTION_FALSE_PROB_MEAN, PICKED_UP_DETECTION_FALSE_PROB_STD, size=len(self.picked_up_objects) - 1)
-		# normalize probabilities
-		sum_probs = true_prob + false_probs.sum()
-		true_prob /= sum_probs
-		false_probs /= sum_probs
-		# create list of (obj_id, prob) for true detection and false detections
-		true_label = [(pick_up_object_id, true_prob)]
-		false_labels = [(obj, prob) for obj, prob in zip(self.picked_up_objects, false_probs) if obj.id != pick_up_object_id]
-		return true_label + false_labels
 
 	def step(
 		 	self,
@@ -209,11 +187,22 @@ class MyEnv(MiniGridEnv):
 
 		# get the object at robot's position
 		object = self.grid.get(*self.agent_pos)
+	
+		# add noise to object
+		object_set = set()
+		if object is not None:
+			object_set.add(self.language.get_constant(object))
+		print(object_set)
+		labels = self.label_extractor.get_labels(obs, {"observations": object_set})
+		print("Object observed is:", object)
+		print("Labels observed are:", labels)
   
+		# TODO: define self.label_extractor and pass observations to {}
+	
 		# transition the reward machine with the object
 		terminated, reward, _ = self.rm.transition(object)
 		rm_state = self.rm.get_current_int_state()
-  
+	
 		# check if max steps reached
 		if self.step_count >= self.max_steps:
 			truncated = True
@@ -225,7 +214,7 @@ class MyEnv(MiniGridEnv):
 
 	@staticmethod
 	def _gen_mission():
-		return "fetch all yellow balls, then one blue ball, and reach the goal"
+		return "fetch one ball, then all yellow balls"
 	
 
 # show the grid
