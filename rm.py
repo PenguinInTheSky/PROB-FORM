@@ -58,7 +58,7 @@ class RewardMachine():
     return self.reward
   
   def noisy_transition(self, labels):
-    print(labels)
+    # print(labels)
     reward = 0
     self.step_count += 1
     
@@ -71,6 +71,8 @@ class RewardMachine():
           self.noisy_buffer[label] = prob
         else:
           self.noisy_buffer[label] = max(self.noisy_buffer[label], prob)
+          
+    # print("Updated noisy buffer is:", self.noisy_buffer)
     
     # 2. check transition with new buffer for universal condition
     # Mote: no seperate goal check 
@@ -78,16 +80,16 @@ class RewardMachine():
       if (self.current_state, next_state) in self.state_transitions:
         transition_type, predicate, constants = self.state_transitions[(self.current_state, next_state)]
         # Note: universal unary predicates only
-        print("Checking transition from", self.current_state, "to", next_state)
-        print("Transition type:", transition_type)
-        print("Predicate:", predicate)
-        print("Constants:", constants)
+        # print("Checking transition from", self.current_state, "to", next_state)
+        # print("Transition type:", transition_type)
+        # print("Predicate:", predicate)
+        # print("Constants:", constants)
         if transition_type == 'universal':
           min_prob = np.min([
             self.noisy_buffer[label] if label in self.noisy_buffer else 0.0
             for label in self.env.constants if self.env.language.check_rule(predicate, [label])
           ])
-          print("Labels that satisfy the predicate are:", [label for label in self.env.constants if self.env.language.check_rule(predicate, [label])])
+          # print("Labels that satisfy the predicate are:", [label for label in self.env.constants if self.env.language.check_rule(predicate, [label])])
           if min_prob > PROB_TRANSITION_THRESHOLD_UNIVERSAL:
             self.noisy_buffer = {}
             reward = self.rewards[(self.current_state, next_state)]
@@ -99,7 +101,7 @@ class RewardMachine():
             self.noisy_buffer[label] if label in self.noisy_buffer else 0.0
             for label in self.env.constants if self.env.language.check_rule(predicate, [label])
           ])
-          print("Labels that satisfy the predicate are:", [label for label in self.env.constants if self.env.language.check_rule(predicate, [label])])
+          # print("Labels that satisfy the predicate are:", [label for label in self.env.constants if self.env.language.check_rule(predicate, [label])])
           if max_prob > PROB_TRANSITION_THRESHOLD_EXISTENTIAL:
             self.noisy_buffer = {}
             reward = self.rewards[(self.current_state, next_state)]
@@ -125,8 +127,8 @@ class RewardMachine():
     # if we cannot transition, do nothing
     
     # 4. return done, reward, info (perhaps)
-    print("And next state is:", self.current_state)
-    print("Reward is:", self.reward)
+    # print("And next state is:", self.current_state)
+    # print("Reward is:", self.reward)
     done = self.is_accepted()
     # if done:
       # print("Task completed!")

@@ -39,7 +39,7 @@ class MyEnv(MiniGridEnv):
 		super().__init__(
 			mission_space=mission_space,
 			grid_size=size,
-			max_steps=1500,
+			max_steps=200,
 			**kwargs,
 		)
 		
@@ -50,7 +50,7 @@ class MyEnv(MiniGridEnv):
 		self.rm = RewardMachine(self)
 		
 		# initialize the language
-		self.constants = ["o0", "o1"]
+		self.constants = ["o0", "o1", "o2", "o3"]
 		self.predicates = ["blue", "yellow"]
 		# self.constants = ["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11"]
 		# self.predicates = ["yellow", "blue", "purple", "red", "grey", "green", "goal"]
@@ -63,7 +63,7 @@ class MyEnv(MiniGridEnv):
 				sensor_true_confidence=SENSOR_TRUE_CONFIDENCE,
 				sensor_false_confidence=SENSOR_FALSE_CONFIDENCE,
 				label=constant,
-				value_true_prior= 0.5
+				value_true_prior= 1 / ((size - 2)* (size - 2))
 			)
 			self.label_funs.append(label_fun)
 		self.label_extractor = NoisyLabelingFunctionComposer(self.label_funs)
@@ -112,7 +112,7 @@ class MyEnv(MiniGridEnv):
 		# generate and place checkpoints: 2 yellow, 2 red, 2 blue, 2 purple, 2 grey, 2 green 
 		for c in ["blue", "yellow"]: # ["yellow", "blue", "red", "purple", "grey", "green"]:
 			# place object randomly in the grid, avoid placing on walls
-			for _ in range(1): # 2
+			for _ in range(2): # 2
 				checkpoint = CheckPoint(c)
 	
 				# add mapping to language
@@ -196,7 +196,6 @@ class MyEnv(MiniGridEnv):
 		labels = self.label_extractor.get_labels(obs, {"observations": object_set})
 		# print("Object observed is:", object)
 		# print("Labels observed are:", labels)
-  
 		# transition the reward machine with the object
 		terminated, reward, _ = self.rm.noisy_transition(labels)
 		rm_state = self.rm.get_current_int_state()
