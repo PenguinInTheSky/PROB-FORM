@@ -23,7 +23,9 @@ from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX, STATE_TO_IDX
 
 from constants import SENSOR_FALSE_CONFIDENCE, SENSOR_TRUE_CONFIDENCE
 
-class MyEnv(MiniGridEnv):
+import abc
+
+class MyEnv(MiniGridEnv, abc.ABC):
 	# define action space
 	class Actions(IntEnum):
 		left = 0
@@ -47,25 +49,18 @@ class MyEnv(MiniGridEnv):
 		self.actions = MyEnv.Actions
 		self.action_space = gym.spaces.Discrete(len(self.actions))
 	
-		self.rm = RewardMachine(self)
+		self.rm = self._gen_reward_machine()
 		
 		# initialize the language
-		self.constants = ["o0", "o1", "o2", "o3"]
-		self.predicates = ["blue", "yellow"]
+		self.constants = self._gen_constants()
+		self.predicates = self._gen_predicates()
 		# self.constants = ["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11"]
 		# self.predicates = ["yellow", "blue", "purple", "red", "grey", "green", "goal"]
 		self.language = Language(self.constants, self.predicates)
 
 		# create label extractors for each constant, and compose them together
-		self.label_funs = []
-		for constant in self.constants:
-			label_fun = OfficeWorldAbstractLabelExtractor(
-				sensor_true_confidence=SENSOR_TRUE_CONFIDENCE,
-				sensor_false_confidence=SENSOR_FALSE_CONFIDENCE,
-				label=constant,
-				value_true_prior= 1 / ((size - 2)* (size - 2))
-			)
-			self.label_funs.append(label_fun)
+		self.label_funs = self._gen_label_fun()
+		print(self.label_funs)
 		self.label_extractor = NoisyLabelingFunctionComposer(self.label_funs)
 
 	def __str__(self):
@@ -91,48 +86,30 @@ class MyEnv(MiniGridEnv):
 		lines.append(f"RM state: {self.rm.current_state} | steps: {self.step_count}/{self.max_steps}")
 		return '\n'.join(lines)
 
-	def _gen_grid(self, width=5, height=5):
-		# size 10 * 10, wall at column 5, gap at (5, 5), goal at (9, 9), agent at (1, 1), yellow balls at (3, 3), (2, 6), (4, 5), (2, 7), blue ball at (7, 7), (1, 3)
-		self.grid = Grid(width, height)
-		self.grid.wall_rect(0, 0, width, height)
-		
-		# internal walls
-		# self.grid.vert_wall(6, 1, 2)
-		# self.grid.vert_wall(6, 4, 6)
-		# self.grid.vert_wall(6, 11, 1)
-		# self.grid.horz_wall(1, 6, 1)
-		# self.grid.horz_wall(3, 6, 3)
-		# self.grid.horz_wall(7, 7, 2)
-		# self.grid.horz_wall(10, 7, 2)
-				
-		# add objects, including checkpoints and goal
-		self.objects = []
-	
-		tmp = 0
-		# generate and place checkpoints: 2 yellow, 2 red, 2 blue, 2 purple, 2 grey, 2 green 
-		for c in ["blue", "yellow"]: # ["yellow", "blue", "red", "purple", "grey", "green"]:
-			# place object randomly in the grid, avoid placing on walls
-			for _ in range(2): # 2
-				checkpoint = CheckPoint(c)
-	
-				# add mapping to language
-				self.language.add_constant_mapping(self.constants[tmp], checkpoint)
-				# add rules to language
-				self.language.add_rule(c, [self.constants[tmp]])
+	@abc.abstractmethod
+	def _gen_constants(self):
+		raise RuntimeError("Not implemented")
 
-				self.objects.append(checkpoint)
-				self.place_obj(checkpoint, top=(1, 1), size=(width - 3, height - 3))
-				tmp += 1
+	@abc.abstractmethod
+	def _gen_predicates(self):
+		raise RuntimeError("Not implemented")
+
+	@abc.abstractmethod
+	def _gen_label_fun(self):
+		raise RuntimeError("Not implemented")
+
+	@abc.abstractmethod
+	def _gen_grid(self):
+		raise RuntimeError("Not implemented")
+
+	@abc.abstractmethod
+	def _gen_reward_machine(self):
+		raise RuntimeError("Not implemented")
 		
-		# generate and place goal
-		# goal = Goal()
-		# self.objects.append(goal)
-		# self.put_obj(goal, width - 2, height - 2)
-		self.place_agent()
-		
-		# generate mission
-		self.mission = self._gen_mission()
-		
+	@abc.abstractmethod
+	def _gen_mission(self):
+		raise RuntimeError("Not implemented")
+
 	def reset(
 		self,
 		*,
@@ -208,10 +185,6 @@ class MyEnv(MiniGridEnv):
 
 	def get_objects(self):
 		return self.objects
-
-	@staticmethod
-	def _gen_mission():
-		return "fetch one ball, then all yellow balls"
 	
 
 # show the grid

@@ -7,6 +7,9 @@ __pycache__/
 # Training runs
 runs/
 
+# Policy rollout videos
+videos/
+
 # Miniconda installer
 Miniconda*.sh
 

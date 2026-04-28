@@ -14,7 +14,7 @@ from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 from rm import RewardMachine
-import env
+import tasks
 
 @dataclass
 class Args:
@@ -84,7 +84,8 @@ def make_env(env_id, idx, capture_video, run_name):
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array")
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
+            trigger = lambda x: x % 100 == 0
+            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}", episode_trigger=trigger)
         else:
             env = gym.make(env_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)

@@ -5,7 +5,7 @@ from minigrid.core.world_object import Goal, WorldObj
 from constants import ADD_TO_BUFFER_PROB_THRESHOLD, PROB_TRANSITION_THRESHOLD_EXISTENTIAL, PROB_TRANSITION_THRESHOLD_UNIVERSAL
 import numpy as np 
 class RewardMachine():
-  def __init__(self, env):
+  def __init__(self, env, states, state_transitions, rewards):
     self.env = env
     
     self.states = ['u0', 'u1', 'u2']#, 'u3', 'uA']
