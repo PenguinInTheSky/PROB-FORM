@@ -121,22 +121,9 @@ class RewardMachine():
             self.current_state = next_state
             break
             
-    # 3. if we can transition, update the current state and reset the buffer, and set the reward based on the rewards dict
-    # if we cannot transition, do nothing
-    
-    # 4. return done, reward, info (perhaps)
-    # print("And next state is:", self.current_state)
-    # print("Reward is:", self.reward)
     done = self.is_accepted()
     rejected = self.is_rejected()
-    # if done:
-      # print("Task completed!")
     return done, rejected, reward, {}
-    
-    # 3. check transition with new buffer for existential condition
-    
-    # 4. reset buffer if transition happens, and update reward and current state accordingly
-    pass
   
   def transition(self, obj: WorldObj):
     reward = 0

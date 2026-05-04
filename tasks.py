@@ -47,10 +47,10 @@ class OneBlueTwoYellow(MyEnv):
 		self.objects = []
 	
 		tmp = 0
-		# generate and place checkpoints: 2 yellow, 2 red, 2 blue, 2 purple, 2 grey, 2 green 
-		for c in ["blue", "yellow"]: # ["yellow", "blue", "red", "purple", "grey", "green"]:
+		# generate and place checkpoints
+		for c in ["blue", "yellow"]:
 			# place object randomly in the grid, avoid placing on walls
-			for _ in range(2): # 2
+			for _ in range(2):
 				checkpoint = CheckPoint(c)
 	
 				# add mapping to language
@@ -62,10 +62,6 @@ class OneBlueTwoYellow(MyEnv):
 				self.place_obj(checkpoint, top=(1, 1), size=(width - 3, height - 3))
 				tmp += 1
 		
-		# generate and place goal
-		# goal = Goal()
-		# self.objects.append(goal)
-		# self.put_obj(goal, width - 2, height - 2)
 		self.place_agent()
 		
 		# generate mission
@@ -189,7 +185,6 @@ class OneBlueTwoYellowAPurpleThenGoal(MyEnv):
 		return label_funs
 	 
 	def _gen_grid(self, width=6, height=6):
-		# size 10 * 10, wall at column 5, gap at (5, 5), goal at (9, 9), agent at (1, 1), yellow balls at (3, 3), (2, 6), (4, 5), (2, 7), blue ball at (7, 7), (1, 3)
 		self.grid = Grid(width, height)
 		self.grid.wall_rect(0, 0, width, height)
 				
@@ -197,10 +192,10 @@ class OneBlueTwoYellowAPurpleThenGoal(MyEnv):
 		self.objects = []
 	
 		tmp = 0
-		# generate and place checkpoints: 2 yellow, 2 red, 2 blue, 2 purple, 2 grey, 2 green 
-		for c in ["blue", "yellow", "purple"]: # ["yellow", "blue", "red", "purple", "grey", "green"]:
+		# generate and place checkpoints
+		for c in ["blue", "yellow", "purple"]:
 			# place object randomly in the grid, avoid placing on walls
-			for _ in range(2): # 2
+			for _ in range(2):
 				checkpoint = CheckPoint(c)
 	
 				# add mapping to language
@@ -334,13 +329,46 @@ if __name__ == "__main__":
 	manual_control = ManualControl(env, seed=42)
 	manual_control.start()
  
-def make_myenv(**kwargs):
+def make_one_blue_two_yellow(**kwargs):
+	env = OneBlueTwoYellow(**kwargs)
+	env = FullyObsWrapper(env)
+	env = FlatObsWrapper(env)
+	return env
+
+def make_two_yellow_then_goal(**kwargs):
+	env = TwoYellowThenGoal(**kwargs)
+	env = FullyObsWrapper(env)
+	env = FlatObsWrapper(env)
+	return env
+
+def make_one_blue_two_yellow_a_purple_then_goal(**kwargs):
+	env = OneBlueTwoYellowAPurpleThenGoal(**kwargs)
+	env = FullyObsWrapper(env)
+	env = FlatObsWrapper(env)
+	return env
+
+def make_one_green_then_goal_lava(**kwargs):
 	env = OneGreenThenGoalLava(**kwargs)
 	env = FullyObsWrapper(env)
 	env = FlatObsWrapper(env)
 	return env
 
 gym.register(
+	id="OneBlueTwoYellow",
+	entry_point=make_one_blue_two_yellow,
+)
+
+gym.register(
+	id="TwoYellowThenGoal",
+	entry_point=make_two_yellow_then_goal,
+)
+
+gym.register(
+	id="OneBlueTwoYellowAPurpleThenGoal",
+	entry_point=make_one_blue_two_yellow_a_purple_then_goal,
+)
+
+gym.register(
 	id="OneGreenThenGoalLava",
-	entry_point=make_myenv,
+	entry_point=make_one_green_then_goal_lava,
 )

@@ -50,8 +50,6 @@ class MyEnv(MiniGridEnv, abc.ABC):
 		# initialize the language
 		self.constants = self._gen_constants()
 		self.predicates = self._gen_predicates()
-		# self.constants = ["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11"]
-		# self.predicates = ["yellow", "blue", "purple", "red", "grey", "green", "goal"]
 		self.language = Language(self.constants, self.predicates)
 
 		# create label extractors for each constant, and compose them together
