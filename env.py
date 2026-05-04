@@ -31,10 +31,6 @@ class MyEnv(MiniGridEnv, abc.ABC):
 		left = 0
 		right = 1
 		forward = 2
-		# pickup = 3
-		# drop = 4
-		# toggle = 5
-		# done = 4 # 6
 	
 	def __init__(self, size=5, **kwargs):
 		mission_space = MissionSpace(mission_func=self._gen_mission)
@@ -60,7 +56,6 @@ class MyEnv(MiniGridEnv, abc.ABC):
 
 		# create label extractors for each constant, and compose them together
 		self.label_funs = self._gen_label_fun()
-		print(self.label_funs)
 		self.label_extractor = NoisyLabelingFunctionComposer(self.label_funs)
 
 	def __str__(self):
@@ -174,7 +169,7 @@ class MyEnv(MiniGridEnv, abc.ABC):
 		# print("Object observed is:", object)
 		# print("Labels observed are:", labels)
 		# transition the reward machine with the object
-		terminated, reward, _ = self.rm.noisy_transition(labels)
+		terminated, truncated, reward, _ = self.rm.noisy_transition(labels)
 		rm_state = self.rm.get_current_int_state()
 	
 		# check if max steps reached
