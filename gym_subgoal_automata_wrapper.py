@@ -73,7 +73,7 @@ class OfficeWorldAbstractLabelExtractor(LabelExtractor):
                       + p(true_value_predicted | false_value) * p(false_value)
            - Opposite case p(true_value | false_value_predicted)  is similar
     """
-
+    
     def get_label_confidence(self, label_true_pred: bool, value_true_prior: float = 0.5):
         value_false_prior = 1 - value_true_prior
         # case: p(true_value | true_value_predicted)

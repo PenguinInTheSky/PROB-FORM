@@ -8,6 +8,8 @@ class RewardMachine():
   def __init__(self, env, states, state_transitions, rewards):
     self.env = env
     
+    self.threshold_prob = env.get_threshold_prob()
+    print("Threshold prob for RM transitions is:", self.threshold_prob)
     self.states = states
     self.start_state = states[0]
     self.state_to_int = {state: i for i, state in enumerate(states)}
@@ -55,10 +57,11 @@ class RewardMachine():
     reward = 0
     self.step_count += 1
     
+    
     # 1. update buffer with noisy labels
     # for key and value in labels, if value > threshold, add key to buffer with some probability
     for (label, prob) in labels.items():
-      if prob > ADD_TO_BUFFER_PROB_THRESHOLD:
+      if prob > self.threshold_prob:
         # add obj_id to buffer with some probability
         if label not in self.noisy_buffer:
           self.noisy_buffer[label] = prob
@@ -83,7 +86,7 @@ class RewardMachine():
             for label in self.env.constants if self.env.language.check_rule(predicate, [label])
           ])
           # print("Labels that satisfy the predicate are:", [label for label in self.env.constants if self.env.language.check_rule(predicate, [label])])
-          if min_prob > PROB_TRANSITION_THRESHOLD_UNIVERSAL:
+          if min_prob > self.threshold_prob:
             self.noisy_buffer = {}
             reward = self.rewards[(self.current_state, next_state)]
             self.current_state = next_state
@@ -95,7 +98,7 @@ class RewardMachine():
             for label in self.env.constants if self.env.language.check_rule(predicate, [label])
           ])
           # print("Labels that satisfy the predicate are:", [label for label in self.env.constants if self.env.language.check_rule(predicate, [label])])
-          if max_prob > PROB_TRANSITION_THRESHOLD_EXISTENTIAL:
+          if max_prob > self.threshold_prob:
             self.noisy_buffer = {}
             reward = self.rewards[(self.current_state, next_state)]
             self.current_state = next_state
@@ -112,7 +115,7 @@ class RewardMachine():
             break
           # make sure all constants are in buffer         
           # all constant in constants must be guarenteed to be mapped to an object beforehand during task and environment definition
-          elif min_prob > PROB_TRANSITION_THRESHOLD_UNIVERSAL:
+          elif min_prob > self.threshold_prob:
             self.noisy_buffer = {}
             reward = self.rewards[(self.current_state, next_state)]
             self.current_state = next_state

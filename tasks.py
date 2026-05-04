@@ -13,7 +13,7 @@ from minigrid.core.world_object import Goal, Lava
 
 class OneBlueTwoYellow(MyEnv):
 	def __init__(self, **kwargs):
-		self.size = 5
+		self.size = 6
 		super().__init__(self.size, **kwargs)
 	
 	@staticmethod
@@ -39,8 +39,7 @@ class OneBlueTwoYellow(MyEnv):
 	
 		return label_funs
 	 
-	def _gen_grid(self, width=5, height=5):
-		# size 10 * 10, wall at column 5, gap at (5, 5), goal at (9, 9), agent at (1, 1), yellow balls at (3, 3), (2, 6), (4, 5), (2, 7), blue ball at (7, 7), (1, 3)
+	def _gen_grid(self, width=6, height=6):
 		self.grid = Grid(width, height)
 		self.grid.wall_rect(0, 0, width, height)
 				
@@ -84,10 +83,10 @@ class OneBlueTwoYellow(MyEnv):
 		rm_rewards[('u1', 'uA')] = 0.7
   
 		return RewardMachine(self, rm_states, rm_state_transitions, rm_rewards)
-	
+
 class TwoYellowThenGoal(MyEnv):
 	def __init__(self, **kwargs):
-		self.size = 5
+		self.size = 6
 		super().__init__(self.size, **kwargs)
 	
 	@staticmethod
@@ -113,7 +112,7 @@ class TwoYellowThenGoal(MyEnv):
 	
 		return label_funs
 
-	def _gen_grid(self, width=5, height=5):
+	def _gen_grid(self, width=6, height=6):
 		self.grid = Grid(width, height)
 		self.grid.wall_rect(0, 0, width, height)
 				
@@ -163,7 +162,7 @@ class TwoYellowThenGoal(MyEnv):
 
 class OneBlueTwoYellowAPurpleThenGoal(MyEnv):
 	def __init__(self, **kwargs):
-		self.size = 7
+		self.size = 6
 		super().__init__(self.size, **kwargs)
 	
 	@staticmethod
@@ -189,7 +188,7 @@ class OneBlueTwoYellowAPurpleThenGoal(MyEnv):
 	
 		return label_funs
 	 
-	def _gen_grid(self, width=7, height=7):
+	def _gen_grid(self, width=6, height=6):
 		# size 10 * 10, wall at column 5, gap at (5, 5), goal at (9, 9), agent at (1, 1), yellow balls at (3, 3), (2, 6), (4, 5), (2, 7), blue ball at (7, 7), (1, 3)
 		self.grid = Grid(width, height)
 		self.grid.wall_rect(0, 0, width, height)
@@ -244,7 +243,7 @@ class OneBlueTwoYellowAPurpleThenGoal(MyEnv):
 
 class OneGreenThenGoalLava(MyEnv):
 	def __init__(self, **kwargs):
-		self.size = 5
+		self.size = 6
 		super().__init__(self.size, **kwargs)
 	
 	@staticmethod
@@ -270,7 +269,7 @@ class OneGreenThenGoalLava(MyEnv):
 	
 		return label_funs
 
-	def _gen_grid(self, width=5, height=5):
+	def _gen_grid(self, width=6, height=6):
 		self.grid = Grid(width, height)
 		self.grid.wall_rect(0, 0, width, height)
 				
@@ -305,7 +304,7 @@ class OneGreenThenGoalLava(MyEnv):
 		self.language.add_constant_mapping("o4", lava)
 		self.language.add_rule("lava", ["o4"])
 		self.objects.append(lava)	
-		self.put_obj(lava, 1, 1)
+		self.put_obj(lava, width//2, height//2)
 		
 		self.place_agent()
   
@@ -331,7 +330,7 @@ class OneGreenThenGoalLava(MyEnv):
 
 # show the grid
 if __name__ == "__main__":
-	env = OneGreenThenGoalLava(render_mode="human")
+	env = TwoYellowThenGoal(render_mode="human")
 	manual_control = ManualControl(env, seed=42)
 	manual_control.start()
  

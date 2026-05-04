@@ -180,7 +180,13 @@ class MyEnv(MiniGridEnv, abc.ABC):
 
 	def get_objects(self):
 		return self.objects
-	
+
+	def get_threshold_prob(self):
+		value_true_prior = 1 / (self.size - 2)**2
+		value_false_prior = 1 - value_true_prior
+		prob = (SENSOR_TRUE_CONFIDENCE * value_true_prior) / ((SENSOR_TRUE_CONFIDENCE * value_true_prior) + (1 - SENSOR_FALSE_CONFIDENCE) * value_false_prior)
+		# return round down to 3 decimal places
+		return round(prob, 3)
 
 # show the grid
 if __name__ == "__main__":
