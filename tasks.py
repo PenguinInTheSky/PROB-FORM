@@ -13,7 +13,7 @@ from minigrid.core.world_object import Goal, Lava
 
 class OneBlueTwoYellow(MyEnv):
 	def __init__(self, **kwargs):
-		self.size = 6
+		self.size = 5
 		super().__init__(self.size, **kwargs)
 	
 	@staticmethod
@@ -39,7 +39,7 @@ class OneBlueTwoYellow(MyEnv):
 	
 		return label_funs
 	 
-	def _gen_grid(self, width=6, height=6):
+	def _gen_grid(self, width=5, height=5):
 		self.grid = Grid(width, height)
 		self.grid.wall_rect(0, 0, width, height)
 				
@@ -77,12 +77,16 @@ class OneBlueTwoYellow(MyEnv):
 		rm_rewards = defaultdict(float)
 		rm_rewards[('u0', 'u1')] = 0.8
 		rm_rewards[('u1', 'uA')] = 0.7
-  
+	
 		return RewardMachine(self, rm_states, rm_state_transitions, rm_rewards)
+
+	@staticmethod
+	def get_num_rm_states():
+	 	return 3
 
 class TwoYellowThenGoal(MyEnv):
 	def __init__(self, **kwargs):
-		self.size = 6
+		self.size = 5
 		super().__init__(self.size, **kwargs)
 	
 	@staticmethod
@@ -108,7 +112,7 @@ class TwoYellowThenGoal(MyEnv):
 	
 		return label_funs
 
-	def _gen_grid(self, width=6, height=6):
+	def _gen_grid(self, width=5, height=5):
 		self.grid = Grid(width, height)
 		self.grid.wall_rect(0, 0, width, height)
 				
@@ -144,6 +148,7 @@ class TwoYellowThenGoal(MyEnv):
 		self.mission = self._gen_mission()
 	
 	def _gen_reward_machine(self):
+		self.num_rm_states = 3
 		rm_states = ['u0', 'u1', 'uA']
 	
 		rm_state_transitions = defaultdict(list)
@@ -153,8 +158,12 @@ class TwoYellowThenGoal(MyEnv):
 		rm_rewards = defaultdict(float)
 		rm_rewards[('u0', 'u1')] = 0.7
 		rm_rewards[('u1', 'uA')] = 0.8
-  
+	
 		return RewardMachine(self, rm_states, rm_state_transitions, rm_rewards)
+
+	@staticmethod
+	def get_num_rm_states():
+	 	return 3
 
 class OneBlueTwoYellowAPurpleThenGoal(MyEnv):
 	def __init__(self, **kwargs):
@@ -213,7 +222,7 @@ class OneBlueTwoYellowAPurpleThenGoal(MyEnv):
 		self.language.add_rule("goal", ["o7"])
 		self.objects.append(goal)
 		self.put_obj(goal, width - 2, height - 2)
-  
+	
 		self.place_agent()
 		
 		# generate mission
@@ -233,12 +242,16 @@ class OneBlueTwoYellowAPurpleThenGoal(MyEnv):
 		rm_rewards[('u1', 'u2')] = 0.7
 		rm_rewards[('u2', 'u3')] = 0.6
 		rm_rewards[('u3', 'uA')] = 0.5
-  
+	
 		return RewardMachine(self, rm_states, rm_state_transitions, rm_rewards)
+	
+	@staticmethod
+	def get_num_rm_states():
+	 	return 5
 
 class OneGreenThenGoalLava(MyEnv):
 	def __init__(self, **kwargs):
-		self.size = 6
+		self.size = 5
 		super().__init__(self.size, **kwargs)
 	
 	@staticmethod
@@ -293,8 +306,8 @@ class OneGreenThenGoalLava(MyEnv):
 		self.language.add_rule("goal", ["o3"])
 		self.objects.append(goal)
 		self.put_obj(goal, width - 2, height - 2)
-  
-  	# generate and place lava
+	
+		# generate and place lava
 		lava = Lava()
 		self.language.add_constant_mapping("o4", lava)
 		self.language.add_rule("lava", ["o4"])
@@ -302,7 +315,7 @@ class OneGreenThenGoalLava(MyEnv):
 		self.put_obj(lava, width//2, height//2)
 		
 		self.place_agent()
-  
+	
 		# generate mission
 		self.mission = self._gen_mission()
 	
@@ -320,12 +333,16 @@ class OneGreenThenGoalLava(MyEnv):
 		rm_rewards[('u1', 'uA')] = 0.8
 		rm_rewards[('u0', 'uR')] = -10.0
 		rm_rewards[('u1', 'uR')] = -10.0
-  
+	
 		return RewardMachine(self, rm_states, rm_state_transitions, rm_rewards)
 
+	@staticmethod
+	def get_num_rm_states():
+	 	return 4
+ 
 # show the grid
 if __name__ == "__main__":
-	env = TwoYellowThenGoal(render_mode="human")
+	env = OneBlueTwoYellow(render_mode="human")
 	manual_control = ManualControl(env, seed=42)
 	manual_control.start()
  

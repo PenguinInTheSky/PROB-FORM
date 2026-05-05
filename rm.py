@@ -9,7 +9,6 @@ class RewardMachine():
     self.env = env
     
     self.threshold_prob = env.get_threshold_prob()
-    print("Threshold prob for RM transitions is:", self.threshold_prob)
     self.states = states
     self.start_state = states[0]
     self.state_to_int = {state: i for i, state in enumerate(states)}
@@ -28,11 +27,6 @@ class RewardMachine():
 
     self.reward = 0
     self.step_count = 0
-  
-  @staticmethod
-  def get_num_states():
-    # TODO
-    return 3
   
   def get_current_int_state(self):
     return self.state_to_int[self.current_state]
@@ -53,7 +47,8 @@ class RewardMachine():
     return self.reward
   
   def noisy_transition(self, labels):
-    print(labels)
+    # print(labels)
+    # print(self.threshold_prob)
     reward = 0
     self.step_count += 1
     
@@ -68,7 +63,7 @@ class RewardMachine():
         else:
           self.noisy_buffer[label] = max(self.noisy_buffer[label], prob)
           
-    print("Updated noisy buffer is:", self.noisy_buffer)
+    # print("Updated noisy buffer is:", self.noisy_buffer)
     
     # 2. check transition with new buffer for universal condition
     # Mote: no seperate goal check 
@@ -76,10 +71,10 @@ class RewardMachine():
       if (self.current_state, next_state) in self.state_transitions:
         transition_type, predicate, constants = self.state_transitions[(self.current_state, next_state)]
         # Note: universal unary predicates only
-        print("Checking transition from", self.current_state, "to", next_state)
-        print("Transition type:", transition_type)
-        print("Predicate:", predicate)
-        print("Constants:", constants)
+        # print("Checking transition from", self.current_state, "to", next_state)
+        # print("Transition type:", transition_type)
+        # print("Predicate:", predicate)
+        # print("Constants:", constants)
         if transition_type == 'universal':
           min_prob = np.min([
             self.noisy_buffer[label] if label in self.noisy_buffer else 0.0

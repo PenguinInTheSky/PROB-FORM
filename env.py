@@ -184,6 +184,7 @@ class MyEnv(MiniGridEnv, abc.ABC):
 		value_false_prior = 1 - value_true_prior
 		prob = (SENSOR_TRUE_CONFIDENCE * value_true_prior) / ((SENSOR_TRUE_CONFIDENCE * value_true_prior) + (1 - SENSOR_FALSE_CONFIDENCE) * value_false_prior)
 		# return round down to 3 decimal places
+		prob -= 0.001
 		return round(prob, 3)
 
 # show the grid

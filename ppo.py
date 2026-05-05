@@ -14,7 +14,7 @@ from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 from rm import RewardMachine
-import tasks
+import tasks, mini_tasks
 
 @dataclass
 class Args:
@@ -184,9 +184,43 @@ if __name__ == "__main__":
         [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
-    num_states = RewardMachine.get_num_states()
+    if args.env_id == "OneBlueTwoYellow":
+        num_states = tasks.OneBlueTwoYellow.get_num_rm_states()
+    elif args.env_id == "TwoYellowThenGoal":
+        num_states = tasks.TwoYellowThenGoal.get_num_rm_states()
+    elif args.env_id == "OneBlueTwoYellowAPurpleThenGoal":
+        num_states = tasks.OneBlueTwoYellowAPurpleThenGoal.get_num_rm_states()
+    elif args.env_id == "OneGreenThenGoalLava":
+        num_states = tasks.OneGreenThenGoalLava.get_num_rm_states()
+    elif args.env_id == "TwoYellow":
+        num_states = mini_tasks.TwoYellow.get_num_rm_states()
+    else:
+        num_states = 1
+    
     print("Num states is", num_states)
     agents = [Agent(envs).to(device) for _ in range(num_states)]
+    vf_coefs = [args.vf_coef for _ in range(num_states)]
+    ent_coefs = [args.ent_coef for _ in range(num_states)]
+    if args.env_id == "OneBlueTwoYellow":
+        vf_coefs[0] = args.vf_coef*2
+        ent_coefs[0] = args.ent_coef*2
+    elif args.env_id == "TwoYellowThenGoal":
+        vf_coefs[1] = args.vf_coef*2
+        ent_coefs[1] = args.ent_coef*2
+    elif args.env_id == "OneBlueTwoYellowAPurpleThenGoal":
+        vf_coefs[0] = args.vf_coef*2
+        ent_coefs[0] = args.ent_coef*2
+        vf_coefs[2] = args.vf_coef*2
+        ent_coefs[2] = args.ent_coef*2
+        vf_coefs[3] = args.vf_coef*2
+        ent_coefs[3] = args.ent_coef*2
+    elif args.env_id == "OneGreenThenGoalLava":
+        num_states = tasks.OneGreenThenGoalLava.get_num_rm_states()
+    elif args.env_id == "TwoYellow":
+        num_states = mini_tasks.TwoYellow.get_num_rm_states()
+    else:
+        num_states = 1
+    
     optimizers = [optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5) for agent in agents]
 
     # ALGO Logic: Storage setup
@@ -244,7 +278,6 @@ if __name__ == "__main__":
                         writer.add_scalar("charts/episodic_return", infos["episode"]["r"][i], global_step)
                         writer.add_scalar("charts/episodic_length", infos["episode"]["l"][i], global_step)
             
-
         # bootstrap value if not done
         with torch.no_grad():
             next_value = torch.zeros((args.num_envs,)).to(device)
@@ -254,7 +287,7 @@ if __name__ == "__main__":
             next_value = next_value.reshape(1, -1)
             
             advantages = torch.zeros_like(rewards).to(device)
-            lastgaelam = 0
+            lastgaelam = torch.zeros(args.num_envs).to(device)
             for t in reversed(range(args.num_steps)):
                 if t == args.num_steps - 1:
                     nextnonterminal = 1.0 - next_done
@@ -262,7 +295,12 @@ if __name__ == "__main__":
                 else:
                     nextnonterminal = 1.0 - dones[t + 1]
                     nextvalues = values[t + 1]
+                
+                # break GAE chain on RM state transition
+                rm_state_changed = (rm_states[t] != rm_states[t + 1]) if t < args.num_steps - 1 else torch.zeros(args.num_envs).bool()
+                
                 delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
+                lastgaelam = torch.where(rm_state_changed, torch.zeros_like(lastgaelam), lastgaelam)
                 advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
             returns = advantages + values
 
@@ -336,7 +374,7 @@ if __name__ == "__main__":
                         v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
 
                     entropy_loss = entropy.mean()
-                    loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+                    loss = pg_loss - ent_coefs[rm_state] * entropy_loss + v_loss * vf_coefs[rm_state]
 
                     optimizers[rm_state].zero_grad()
                     loss.backward()
